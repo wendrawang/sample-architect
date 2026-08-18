@@ -1,0 +1,145 @@
+import CorePresentation
+import DesignSystem
+import FeatureDashboard
+import FeatureFinancial
+import FeatureMore
+import FeatureQRIS
+import FeatureRewards
+import SwiftUI
+
+public struct MainTabView: View {
+    @StateObject private var viewModel: MainTabViewModel
+    @StateObject private var dashboardViewModel: DashboardViewModel
+    @StateObject private var financialViewModel: FinancialViewModel
+    @StateObject private var qrisViewModel: QRISViewModel
+    @StateObject private var rewardsViewModel: RewardsViewModel
+    @StateObject private var moreViewModel: MoreViewModel
+
+    public init(
+        dependencies: MainDependencies,
+        onTransfer: @escaping () -> Void,
+        onLogout: @escaping () -> Void
+    ) {
+        _viewModel = StateObject(wrappedValue: MainTabViewModel())
+        _dashboardViewModel = StateObject(
+            wrappedValue: DashboardViewModel(
+                getSummary: GetDashboardSummaryUseCase(
+                    repository: dependencies.dashboardRepository
+                ),
+                onTransfer: onTransfer
+            )
+        )
+        _financialViewModel = StateObject(wrappedValue: FinancialViewModel())
+        _qrisViewModel = StateObject(wrappedValue: QRISViewModel())
+        _rewardsViewModel = StateObject(wrappedValue: RewardsViewModel())
+        _moreViewModel = StateObject(wrappedValue: MoreViewModel(onLogout: onLogout))
+    }
+
+    public var body: some View {
+        ZStack(alignment: .bottom) {
+            TabView(selection: $viewModel.selection) {
+                DashboardView(viewModel: dashboardViewModel)
+                    .tag(MainTab.dashboard)
+                    .tabItem {
+                        Label("Dashboard", systemImage: "house.fill")
+                    }
+
+                FinancialView(viewModel: financialViewModel)
+                    .tag(MainTab.financial)
+                    .tabItem {
+                        Label("Financial", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+
+                QRISView(viewModel: qrisViewModel)
+                    .tag(MainTab.qris)
+                    .tabItem {
+                        Label("", systemImage: "circle.fill")
+                    }
+
+                RewardsView(viewModel: rewardsViewModel)
+                    .tag(MainTab.rewards)
+                    .tabItem {
+                        Label("Rewards", systemImage: "gift.fill")
+                    }
+
+                MoreView(viewModel: moreViewModel)
+                    .tag(MainTab.more)
+                    .tabItem {
+                        Label("More", systemImage: "ellipsis.circle.fill")
+                    }
+            }
+            .tint(AppColor.brand)
+
+            CenterQRISOverlay(
+                selection: viewModel.selection,
+                dashboard: dashboardViewModel.presentation,
+                financial: financialViewModel.presentation,
+                qris: qrisViewModel.presentation,
+                rewards: rewardsViewModel.presentation,
+                more: moreViewModel.presentation,
+                action: viewModel.selectQRIS
+            )
+            .padding(.bottom, 4)
+        }
+        .onAppear {
+            AppTabBarAppearance.apply()
+        }
+    }
+}
+
+private struct CenterQRISOverlay: View {
+    let selection: MainTab
+    @ObservedObject var dashboard: ScreenPresentationStore
+    @ObservedObject var financial: ScreenPresentationStore
+    @ObservedObject var qris: ScreenPresentationStore
+    @ObservedObject var rewards: ScreenPresentationStore
+    @ObservedObject var more: ScreenPresentationStore
+    let action: () -> Void
+
+    var body: some View {
+        if !activeStoreHasModal {
+            Button(action: action) {
+                ZStack {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(
+                            width: MainTabStyle.centerButtonSize + 8,
+                            height: MainTabStyle.centerButtonSize + 8
+                        )
+
+                    Circle()
+                        .fill(MainTabStyle.centerButtonGradient)
+                        .frame(
+                            width: MainTabStyle.centerButtonSize,
+                            height: MainTabStyle.centerButtonSize
+                        )
+                        .shadow(color: AppColor.brand.opacity(0.34), radius: 10, x: 0, y: 6)
+
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .accessibilityLabel("Scan QRIS")
+            .transition(.scale.combined(with: .opacity))
+        }
+    }
+
+    private var activeStoreHasModal: Bool {
+        let store: ScreenPresentationStore
+        switch selection {
+        case .dashboard:
+            store = dashboard
+        case .financial:
+            store = financial
+        case .qris:
+            store = qris
+        case .rewards:
+            store = rewards
+        case .more:
+            store = more
+        }
+        return store.bottomSheet != nil || store.blocker != nil
+    }
+}
