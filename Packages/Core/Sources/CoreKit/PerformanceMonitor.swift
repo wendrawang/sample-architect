@@ -60,7 +60,10 @@ public final class FrameRateMonitor: ObservableObject {
     @Published public private(set) var hitchCount: Int = 0
 
     private let proxy = DisplayLinkProxy()
-    private var displayLink: CADisplayLink?
+    /// `deinit` is nonisolated, so it cannot read a main-actor-isolated property of a
+    /// non-Sendable type. Deinit only runs once the last reference is gone and nothing else
+    /// can touch the link, so opting this one property out of isolation is safe.
+    private nonisolated(unsafe) var displayLink: CADisplayLink?
     private var frameCount = 0
     private var windowStart: CFTimeInterval = 0
     private var previousTimestamp: CFTimeInterval = 0

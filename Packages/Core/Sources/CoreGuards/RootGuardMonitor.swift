@@ -33,7 +33,11 @@ public protocol RootGuardMonitoring: AnyObject {
     func stop()
 }
 
-public final class RootGuardMonitor: NSObject, RootGuardMonitoring {
+/// Every entry point runs on the main thread and every framework callback hops to main
+/// before touching state, so the class is main-isolated in practice. `@unchecked Sendable`
+/// states that explicitly, which is what lets `self` be captured by the `@Sendable`
+/// callbacks that `NWPathMonitor` and `CXCallObserver` hand back on their own queues.
+public final class RootGuardMonitor: NSObject, RootGuardMonitoring, @unchecked Sendable {
     public var onReasonChanged: ((RootBlockerReason?) -> Void)?
 
     private let integrityChecker: DeviceIntegrityChecking
@@ -67,8 +71,9 @@ public final class RootGuardMonitor: NSObject, RootGuardMonitoring {
         hasActiveCall = simulatesActiveCall || callObserver.calls.contains { !$0.hasEnded }
 
         pathMonitor.pathUpdateHandler = { [weak self] path in
+            let isSatisfied = path.status == .satisfied
             DispatchQueue.main.async { [weak self] in
-                self?.isOnline = path.status == .satisfied
+                self?.isOnline = isSatisfied
                 self?.publishIfNeeded()
             }
         }
@@ -116,10 +121,10 @@ public final class RootGuardMonitor: NSObject, RootGuardMonitoring {
 
 extension RootGuardMonitor: CXCallObserverDelegate {
     public func callObserver(_ callObserver: CXCallObserver, callChanged call: CXCall) {
+        let hasActive = callObserver.calls.contains { !$0.hasEnded }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.hasActiveCall = self.simulatesActiveCall
-                || callObserver.calls.contains { !$0.hasEnded }
+            self.hasActiveCall = self.simulatesActiveCall || hasActive
             self.publishIfNeeded()
         }
     }
