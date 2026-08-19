@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Every destination this flow can reach, as a value type. Routes carry the data a screen
 /// needs to be rebuilt from scratch — never the screen or its ViewModel.
-public enum AuthRoute: Hashable {
+public enum AuthRoute: Hashable, Sendable {
     case password(username: String)
 }
 

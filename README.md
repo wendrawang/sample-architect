@@ -774,6 +774,7 @@ Sesuaikan nama simulator dengan runtime yang terpasang.
 - `Docs/NEW_FEATURE_GUIDE.md` — checklist feature baru.
 - `Docs/PERFORMANCE_AND_LEAKS.md` — prosedur Instruments.
 - `Docs/SWIFT_CONCURRENCY.md` — `async`/`await`, `Task`, `@MainActor`, dan `Sendable` untuk pembaca yang terbiasa GCD.
+- `Docs/CODE_MAP.md` — kegunaan setiap file, dan apa yang rusak kalau file itu dihapus.
 
 Referensi upstream:
 

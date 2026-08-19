@@ -3,7 +3,7 @@ import CoreKit
 import CorePresentation
 import Foundation
 
-public struct FinancialProduct: Identifiable, Equatable {
+public struct FinancialProduct: Identifiable, Equatable, Sendable {
     public let id: String
     public let name: String
     public let value: String

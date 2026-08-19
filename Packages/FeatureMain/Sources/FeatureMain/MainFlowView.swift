@@ -2,7 +2,7 @@ import CoreNavigation
 import FeatureTransfer
 import SwiftUI
 
-public enum MainRoute: Hashable {
+public enum MainRoute: Hashable, Sendable {
     case transfer
 }
 
