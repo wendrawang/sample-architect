@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "FeatureAuth",
-    platforms: [.iOS(.v15)],
+    platforms: [.iOS(.v16)],
     products: [
         .library(name: "FeatureAuth", targets: ["FeatureAuth"])
     ],

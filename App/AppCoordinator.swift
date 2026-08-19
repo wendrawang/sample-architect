@@ -1,42 +1,42 @@
+import Combine
 import CoreGuards
 import CoreKit
-import CoreNavigation
 import CoreNetwork
 import FeatureAuth
 import FeatureMain
 import FeatureSplash
+import Foundation
 import UIKit
 
+/// Owns app-level state: which root flow is on screen, the global blocker, and the
+/// session/network objects that outlive any single flow.
+///
+/// It deliberately holds no flow object. Swapping `rootState.content` lets SwiftUI tear
+/// down the whole flow — its router, screens, and ViewModels — so there is no child
+/// coordinator to release by hand.
 @MainActor
-final class AppCoordinator: BaseCoordinator {
-    private let window: UIWindow
+final class AppCoordinator: ObservableObject {
+    @Published private(set) var rootState = AppRootState.initial
+
+    let fpsMonitor: FrameRateMonitor?
+
+    let splashRepository: any SplashRepositoryProtocol
+    let authRepository: any AuthRepositoryProtocol
+    let mainDependencies: MainDependencies
+
     private let configuration: AppConfiguration
-    private let navigationController: UINavigationController
-    private let rootContainer: RootContainerViewController
     private let rootGuard: RootGuardMonitor
     private let apiClient: AlamofireAPIClient
     private let sessionStore: AppSessionStore
-    private let fpsMonitor = FrameRateMonitor()
-
-    private var authCoordinator: AuthCoordinator?
-    private var mainCoordinator: MainCoordinator?
-    private var rootState = AppRootState.initial
     private var hasStartedInitialFlow = false
 
     init(
-        window: UIWindow,
         configuration: AppConfiguration,
         secrets: any AppSecretProviding = PlaceholderAppSecrets(),
         networkTracer: any NetworkTracing = NoOpNetworkTracer(),
         initialCredential: OAuthCredential? = nil
     ) {
-        self.window = window
         self.configuration = configuration
-        let navigationController = UINavigationController()
-        self.navigationController = navigationController
-        rootContainer = RootContainerViewController(
-            navigationController: navigationController
-        )
         rootGuard = RootGuardMonitor(
             integrityChecker: LaunchArgumentDeviceIntegrityChecker(),
             simulatesActiveCall: ProcessInfo.processInfo.arguments.contains(
@@ -45,13 +45,29 @@ final class AppCoordinator: BaseCoordinator {
         )
         let sessionStore = AppSessionStore(initialCredential: initialCredential)
         self.sessionStore = sessionStore
-        apiClient = AppNetworkComposition.makeAPIClient(
+        let apiClient = AppNetworkComposition.makeAPIClient(
             configuration: configuration,
             sessionStore: sessionStore,
             secrets: secrets,
             tracer: networkTracer
         )
-        super.init()
+        self.apiClient = apiClient
+        fpsMonitor = configuration.showFPS ? FrameRateMonitor() : nil
+
+        splashRepository = Self.makeSplashRepository(
+            configuration: configuration,
+            apiClient: apiClient
+        )
+        if configuration.useMockServices {
+            authRepository = MockAuthRepository()
+        } else {
+            authRepository = RemoteAuthRepository(apiClient: apiClient)
+        }
+        mainDependencies = MainDependencies.make(
+            apiClient: apiClient,
+            useMocks: configuration.useMockServices
+        )
+
         apiClient.updateCredential(initialCredential)
         apiClient.setUnauthorizedHandler { [weak self] in
             Task { [weak self] in
@@ -60,10 +76,7 @@ final class AppCoordinator: BaseCoordinator {
         }
     }
 
-    override func start() {
-        window.rootViewController = rootContainer
-        window.makeKeyAndVisible()
-
+    func start() {
         rootGuard.onReasonChanged = { [weak self] reason in
             guard let self else { return }
             self.rootState.blocker = reason
@@ -73,123 +86,30 @@ final class AppCoordinator: BaseCoordinator {
                 )
             } else {
                 AppLogger.security.debug("Root blocker cleared")
-            }
-            self.rootContainer.setBlocker(reason) { [weak self] in
-                self?.rootGuard.refresh()
-            }
-            if reason == nil {
                 self.startInitialFlowIfPossible()
             }
         }
         rootGuard.start()
-
-        if configuration.showFPS {
-            fpsMonitor.start()
-            rootContainer.showFPS(fpsMonitor)
-        }
-
+        fpsMonitor?.start()
         startInitialFlowIfPossible()
     }
 
-    override func stop() {
+    func stop() {
         apiClient.setUnauthorizedHandler(nil)
         rootGuard.stop()
-        fpsMonitor.stop()
-        authCoordinator?.stop()
-        mainCoordinator?.stop()
-        authCoordinator = nil
-        mainCoordinator = nil
-        super.stop()
+        fpsMonitor?.stop()
     }
 
-    private func showSplash() {
-        transitionContent(to: .splash)
-
-        let repository: any SplashRepositoryProtocol
-        if configuration.useMockServices {
-            let arguments = ProcessInfo.processInfo.arguments
-            let destination: LaunchDestination
-            if arguments.contains("-simulateMaintenance") {
-                destination = .maintenance
-            } else if arguments.contains("-simulateForceUpdate") {
-                destination = .forceUpdate
-            } else {
-                destination = .preLogin
-            }
-            repository = MockSplashRepository(
-                decision: LaunchDecision(destination: destination),
-                shouldFail: arguments.contains("-simulateSplashFailure")
-            )
-        } else {
-            repository = RemoteSplashRepository(
-                apiClient: apiClient,
-                path: configuration.splashInquiryPath
-            )
-        }
-
-        let viewModel = SplashViewModel(
-            useCase: PrepareLaunchUseCase(repository: repository),
-            onRoute: { [weak self] destination in
-                self?.handleLaunchDestination(destination)
-            },
-            onUpdateRequested: { [weak self] in
-                guard let url = self?.configuration.appStoreURL else { return }
-                UIApplication.shared.open(url)
-            }
-        )
-        let controller = ScreenHostingController(
-            rootView: SplashView(viewModel: viewModel),
-            hidesNavigationBar: true
-        )
-        navigationController.setViewControllers([controller], animated: false)
+    func retryRootGuard() {
+        rootGuard.refresh()
     }
 
-    private func startInitialFlowIfPossible() {
-        guard !hasStartedInitialFlow, rootState.blocker == nil else { return }
-        hasStartedInitialFlow = true
-        showSplash()
+    func openAppStore() {
+        guard let url = configuration.appStoreURL else { return }
+        UIApplication.shared.open(url)
     }
 
-    private func handleUnauthorizedSession() {
-        guard rootState.content == .main else { return }
-        AppLogger.security.warning("Authenticated session expired")
-        showPreLogin()
-    }
-
-    private func showPreLogin() {
-        transitionContent(to: .preLogin)
-        sessionStore.clear()
-        apiClient.updateCredential(nil)
-        releaseMainFlow()
-        releaseAuthFlow()
-
-        let repository: any AuthRepositoryProtocol
-        if configuration.useMockServices {
-            repository = MockAuthRepository()
-        } else {
-            repository = RemoteAuthRepository(apiClient: apiClient)
-        }
-
-        let coordinator = AuthCoordinator(
-            navigationController: navigationController,
-            repository: repository,
-            onAuthenticated: { [weak self] session in
-                guard let self else { return }
-                let credential = OAuthCredential(
-                    accessToken: session.accessToken,
-                    refreshToken: session.refreshToken,
-                    expiration: session.expiration
-                )
-                self.sessionStore.save(credential: credential)
-                self.apiClient.updateCredential(credential)
-                self.showMain()
-            }
-        )
-        authCoordinator = coordinator
-        coordinator.start()
-    }
-
-    private func handleLaunchDestination(_ destination: LaunchDestination) {
+    func handleLaunchDestination(_ destination: LaunchDestination) {
         switch destination {
         case .main where sessionStore.currentCredential() != nil:
             showMain()
@@ -200,38 +120,41 @@ final class AppCoordinator: BaseCoordinator {
         }
     }
 
+    func handleAuthenticated(_ session: AuthSession) {
+        let credential = OAuthCredential(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            expiration: session.expiration
+        )
+        sessionStore.save(credential: credential)
+        apiClient.updateCredential(credential)
+        showMain()
+    }
+
+    func handleLogout() {
+        showPreLogin()
+    }
+
+    private func handleUnauthorizedSession() {
+        guard rootState.content == .main else { return }
+        AppLogger.security.warning("Authenticated session expired")
+        showPreLogin()
+    }
+
+    private func startInitialFlowIfPossible() {
+        guard !hasStartedInitialFlow, rootState.blocker == nil else { return }
+        hasStartedInitialFlow = true
+        transitionContent(to: .splash)
+    }
+
+    private func showPreLogin() {
+        sessionStore.clear()
+        apiClient.updateCredential(nil)
+        transitionContent(to: .preLogin)
+    }
+
     private func showMain() {
         transitionContent(to: .main)
-        releaseAuthFlow()
-        releaseMainFlow()
-
-        let dependencies = MainDependencies.make(
-            apiClient: apiClient,
-            useMocks: configuration.useMockServices
-        )
-        let coordinator = MainCoordinator(
-            navigationController: navigationController,
-            dependencies: dependencies,
-            onLogout: { [weak self] in
-                self?.showPreLogin()
-            }
-        )
-        mainCoordinator = coordinator
-        coordinator.start()
-    }
-
-    private func releaseAuthFlow() {
-        guard let coordinator = authCoordinator else { return }
-        coordinator.stop()
-        authCoordinator = nil
-        LeakWatchdog.expectDeallocation(of: coordinator, named: "AuthCoordinator")
-    }
-
-    private func releaseMainFlow() {
-        guard let coordinator = mainCoordinator else { return }
-        coordinator.stop()
-        mainCoordinator = nil
-        LeakWatchdog.expectDeallocation(of: coordinator, named: "MainCoordinator")
     }
 
     private func transitionContent(to content: AppRootContentState) {
@@ -240,5 +163,32 @@ final class AppCoordinator: BaseCoordinator {
             "Root transition: \(self.rootState.content.rawValue, privacy: .public) -> \(content.rawValue, privacy: .public)"
         )
         rootState.content = content
+    }
+
+    private static func makeSplashRepository(
+        configuration: AppConfiguration,
+        apiClient: any APIClient
+    ) -> any SplashRepositoryProtocol {
+        guard configuration.useMockServices else {
+            return RemoteSplashRepository(
+                apiClient: apiClient,
+                path: configuration.splashInquiryPath
+            )
+        }
+
+        let arguments = ProcessInfo.processInfo.arguments
+        let destination: LaunchDestination
+        if arguments.contains("-simulateMaintenance") {
+            destination = .maintenance
+        } else if arguments.contains("-simulateForceUpdate") {
+            destination = .forceUpdate
+        } else {
+            destination = .preLogin
+        }
+
+        return MockSplashRepository(
+            decision: LaunchDecision(destination: destination),
+            shouldFail: arguments.contains("-simulateSplashFailure")
+        )
     }
 }

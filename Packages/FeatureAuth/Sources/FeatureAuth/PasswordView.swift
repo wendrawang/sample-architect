@@ -64,3 +64,27 @@ public struct PasswordView: View {
         }
     }
 }
+
+/// Ownership boundary for the password screen. It is built when the route is pushed and
+/// released when it pops, which is what lets `PasswordViewModel.deinit` cancel its login task.
+public struct PasswordScreen: View {
+    @StateObject private var viewModel: PasswordViewModel
+
+    public init(
+        username: String,
+        repository: any AuthRepositoryProtocol,
+        onAuthenticated: @escaping (AuthSession) -> Void
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: PasswordViewModel(
+                username: username,
+                loginUseCase: LoginUseCase(repository: repository),
+                onAuthenticated: onAuthenticated
+            )
+        )
+    }
+
+    public var body: some View {
+        PasswordView(viewModel: viewModel)
+    }
+}

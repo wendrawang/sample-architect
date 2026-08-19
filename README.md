@@ -1,10 +1,10 @@
 # ModularBank iOS Template
 
-Template aplikasi mobile banking iOS 15+ dengan:
+Template aplikasi mobile banking iOS 16+ dengan:
 
 - SwiftUI untuk seluruh screen dan komponen UI.
-- `UINavigationController` sebagai satu-satunya navigation engine.
-- MVVM + Coordinator + UseCase + Repository.
+- `NavigationStack` sebagai satu-satunya navigation engine.
+- MVVM + Router + UseCase + Repository.
 - Local Swift Package per core concern dan per feature flow.
 - Alamofire `5.12.0` dengan `Encodable`/`Decodable`, async/await, mTLS, Bearer authentication, controlled token refresh, request signing, download, dan tracing adapter.
 - Bottom sheet, screen-level error blocker, dan snackbar pada setiap halaman.
@@ -27,7 +27,7 @@ Cara termudah:
 2. Double-click `bootstrap.command`.
 3. Buka target `ModularBank`.
 4. Pilih Signing Team jika menjalankan pada device.
-5. Run pada iOS Simulator atau device iOS 15+.
+5. Run pada iOS Simulator atau device iOS 16+.
 
 Alternatif melalui Terminal:
 
@@ -50,15 +50,16 @@ Mock service aktif secara default sehingga project dapat dieksplorasi tanpa back
 
 ```text
 SceneDelegate
-  -> AppCoordinator
-      -> RootContainerViewController
-          ├─ UINavigationController
-          │   ├─ Splash + startup inquiry
-          │   ├─ Pre-login
-          │   │   └─ Username -> Password
-          │   └─ Main
+  -> AppCoordinator (state root)
+      -> AppRootView
+          ├─ Splash + startup inquiry
+          ├─ AuthFlowView
+          │   └─ NavigationStack<AuthRoute>
+          │       └─ Username -> .password
+          ├─ MainFlowView
+          │   └─ NavigationStack<MainRoute>
           │       └─ TabView
-          │           ├─ Beranda / Dashboard -> Transfer
+          │           ├─ Beranda / Dashboard -> .transfer
           │           ├─ Finansial
           │           ├─ QRIS Scan (tombol bulat besar di tengah)
           │           ├─ Rewards
@@ -69,19 +70,20 @@ SceneDelegate
               └─ Panggilan aktif
 ```
 
-`RootContainerViewController` mempertahankan navigation stack dan memasang blocker global di atasnya. Error inquiry sebuah halaman menggunakan blocker milik halaman, bukan mengubah root state.
+`AppRootView` menukar seluruh flow ketika root state berubah dan memasang blocker global di atasnya. Error inquiry sebuah halaman menggunakan blocker milik halaman, bukan mengubah root state.
 
 ## 3. Kegunaan setiap layer
 
 | Layer | Kegunaan | Boleh melakukan | Tidak boleh melakukan |
 |---|---|---|---|
 | View | Render state dan meneruskan intent pengguna | Binding, layout, accessibility, memanggil method ViewModel | Network, business rule, push/pop |
+| Screen | Ownership boundary satu layar | Membuat ViewModel lewat `@StateObject`, merakit UseCase | Layout dan business rule |
 | ViewModel | Mengelola presentation state sebuah screen | Loading/error/success, memanggil UseCase, membentuk model bottom sheet/blocker/snackbar | Import UIKit, membuat controller, memanggil Alamofire |
 | UseCase | Business logic untuk satu intent | Validasi, policy, orchestration repository | Menampilkan UI dan mengetahui navigation |
 | Repository Protocol | Kontrak data yang dibutuhkan domain | Mendefinisikan operasi berbasis domain model | Mengekspos DTO/Alamofire ke ViewModel |
 | Remote Repository | Adapter backend | Membuat `Endpoint`, mapping Codable DTO ke domain | Menyimpan state UI |
 | Mock Repository | Data deterministik untuk demo/test | Delay/case success/failure terkontrol | Menjadi implementasi production |
-| Coordinator | Ownership flow dan navigation | Membuat ViewModel, `UIHostingController`, push/pop, menerima output | Business validation dan render UI |
+| Flow view + Router | Ownership flow dan navigation | Mendeklarasikan route, memetakan route ke Screen, push/pop | Business validation dan render UI |
 | Design System | Konsistensi visual dan presentation shell | Token, reusable component, `ScreenScaffold` | Business logic feature |
 | App Composition | Wiring konkret seluruh dependency | Memilih mock/live, secret adapter, tracer, root route | Menjadi tempat logic tiap feature |
 
@@ -100,7 +102,7 @@ SwiftUI View
 Hasil routing berjalan ke arah sebaliknya melalui output closure:
 
 ```text
-ViewModel output -> Coordinator -> UINavigationController push/pop
+ViewModel output -> Router.push/pop -> NavigationStack path
 ```
 
 ## 4. Kegunaan setiap package
@@ -108,16 +110,16 @@ ViewModel output -> Coordinator -> UINavigationController push/pop
 | Package/product | Isi dan kegunaan | Dipakai ketika |
 |---|---|---|
 | `Core/CoreKit` | `AppLogger`, `LifecycleProbe`, `LeakWatchdog`, `MainThreadGuard`, signpost, FPS/hitch monitor | Semua feature yang membutuhkan observability/lifecycle guard |
-| `Core/CoreNavigation` | `BaseCoordinator`, child ownership, `ScreenHostingController`, global nav appearance | Flow melakukan push/pop SwiftUI melalui UIKit |
+| `Core/CoreNavigation` | `NavigationRouter<Route>`, global nav bar appearance | Flow melakukan push/pop lewat `NavigationStack` |
 | `Core/CoreNetwork` | API client, endpoint, Codable, Alamofire session, mTLS, auth refresh, signature, metadata header, download, tracing | Remote repository berkomunikasi dengan backend |
 | `Core/CorePresentation` | Model dan store bottom sheet, blocker, snackbar | Setiap screen menampilkan transient/global-on-screen state |
 | `Core/CoreGuards` | Internet monitor, call observer, integrity adapter, root blocker reason | App-level condition harus menutup seluruh navigation content |
 | `DesignSystem` | Color/spacing/radius/typography, reusable controls, logo placeholder, tab/nav style, `ScreenScaffold` | Semua SwiftUI screen |
 | `FeatureSplash` | Splash UI, startup inquiry, launch decision, retry/maintenance/force-update | Cold launch sebelum masuk pre-login/main |
-| `FeatureAuth` | Username, password, validation/login UseCase, AuthCoordinator | Pre-login dan autentikasi |
-| `FeatureMain` | Composition boundary lima tab dan MainCoordinator | Setelah autentikasi berhasil |
+| `FeatureAuth` | Username, password, validation/login UseCase, `AuthFlowView` + `AuthRoute` | Pre-login dan autentikasi |
+| `FeatureMain` | Composition boundary lima tab, `MainFlowView` + `MainRoute` | Setelah autentikasi berhasil |
 | `FeatureDashboard` | Dashboard inquiry, hero/menu/balance/transaction UI | Tab Beranda |
-| `FeatureTransfer` | Daftar penerima, nominal, confirmation, submit UseCase, TransferCoordinator | Menu Transfer dari Dashboard |
+| `FeatureTransfer` | Daftar penerima, nominal, confirmation, submit UseCase, `TransferScreen` | Route `.transfer` dari Dashboard |
 | `FeatureFinancial` | Portfolio/product placeholder | Tab Finansial |
 | `FeatureQRIS` | QR scanner shell dan camera/gallery adapter point | Tombol QRIS di tengah tab bar |
 | `FeatureRewards` | Point/redeem placeholder | Tab Rewards |
@@ -126,26 +128,91 @@ ViewModel output -> Coordinator -> UINavigationController push/pop
 
 `FeatureMain` sengaja menjadi composition boundary yang bergantung pada seluruh tab dan `FeatureTransfer`. Feature bisnis lain tidak saling mengimpor; shared helper harus masuk ke Core atau Design System.
 
-## 5. Navigation SwiftUI dengan UINavigationController
+## 5. Navigation dengan NavigationStack
 
-SwiftUI hanya merender screen. Coordinator membuat `UIHostingController` secara lazy:
+Satu flow memiliki satu `NavigationRouter<Route>`. Router hanya menyimpan array route
+bertipe — tidak pernah menyimpan View, ViewModel, atau controller:
 
 ```swift
-let controller = ScreenHostingController(
-    rootView: TransferView(viewModel: viewModel),
-    title: "Transfer"
-)
-controller.hidesBottomBarWhenPushed = true
-navigationController.pushViewController(controller, animated: true)
+public enum MainRoute: Hashable {
+    case transfer
+}
+
+NavigationStack(path: $router.path) {
+    MainTabView(
+        dependencies: dependencies,
+        onTransfer: { [weak router] in
+            guard let router, router.current != .transfer else { return }
+            router.push(.transfer)
+        },
+        onLogout: onLogout
+    )
+    .toolbar(.hidden, for: .navigationBar)
+    .navigationDestination(for: MainRoute.self) { route in
+        destination(for: route)
+    }
+}
 ```
 
-Template sengaja tidak memakai `NavigationView`, `NavigationStack`, `NavigationLink`, atau hidden destination. Keuntungannya:
+Aturan yang dijaga template:
 
-- Ownership controller dan child flow eksplisit.
-- UIKit interactive-pop tetap bekerja.
-- Destination tidak dibuat sebelum dibutuhkan.
-- Release coordinator dapat dipantau saat Back/swipe.
-- Integrasi dengan SDK/perangkat UIKit lebih mudah.
+- `navigationDestination(for:)` dipasang **sekali** pada root stack, tidak di dalam
+  `ForEach`, `List`, atau container lazy. Memasangnya per baris membuat SwiftUI
+  mendaftarkan satu destination table per baris.
+- Route memakai `enum` bertipe, bukan `NavigationPath`. Tidak ada boxing `AnyHashable`,
+  dan route menjadi unit-testable seperti nilai biasa.
+- Route membawa **data** untuk membangun ulang layar, bukan layar itu sendiri.
+- `NavigationLink(value:)` atau `router.push` — jangan `NavigationLink(destination:)`,
+  karena bentuk itu membangun destination sebelum dibutuhkan.
+
+Karena `NavigationStack` membungkus `TabView` pada Main, layar yang di-push menutupi tab
+bar sama seperti `hidesBottomBarWhenPushed` sebelumnya.
+
+### Ownership: pasangan View dan Screen
+
+Setiap layar terdiri dari dua tipe dengan tanggung jawab berbeda:
+
+| Tipe | Tanggung jawab | Kepemilikan ViewModel |
+|---|---|---|
+| `NamaView` | Render murni, menerima ViewModel | `@ObservedObject`, tidak memiliki |
+| `NamaScreen` | Ownership boundary, merakit UseCase | `@StateObject`, memiliki |
+
+```swift
+public struct TransferScreen: View {
+    @StateObject private var viewModel: TransferViewModel
+
+    public init(
+        repository: any TransferRepositoryProtocol,
+        onFinished: @escaping () -> Void
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: TransferViewModel(
+                submitTransfer: SubmitTransferUseCase(repository: repository),
+                onFinished: onFinished
+            )
+        )
+    }
+
+    public var body: some View {
+        TransferView(viewModel: viewModel)
+    }
+}
+```
+
+Pemisahan ini bukan formalitas. `@StateObject` membuat SwiftUI membangun ViewModel tepat
+sekali per identitas layar, sehingga re-render tidak pernah membuat ViewModel baru, dan
+pop melepas ViewModel sehingga `deinit`-nya membatalkan task yang masih berjalan.
+Sementara itu `NamaView` tetap bisa dipreview dan diuji dengan ViewModel buatan sendiri.
+
+Argumen `StateObject(wrappedValue:)` adalah `@autoclosure`, jadi ekspresi pembuatan
+ViewModel hanya dievaluasi pada render pertama — bukan setiap kali `body` dievaluasi.
+
+### Root state bukan navigation
+
+Perpindahan Splash -> Pre-login -> Main **bukan** push/pop. `AppCoordinator` mengubah
+`rootState.content`, lalu `AppRootView` menukar seluruh flow. SwiftUI membongkar flow lama
+berikut router, screen, dan ViewModel-nya, jadi tidak ada child coordinator yang perlu
+dilepas secara manual.
 
 ## 6. Bottom sheet, blocker, dan snackbar di setiap halaman
 
@@ -533,16 +600,16 @@ Mapping keputusan:
 
 ## 14. Dashboard ke Transfer
 
-Menu Transfer pada Dashboard tidak memakai `NavigationLink`:
+Menu Transfer pada Dashboard tidak memakai `NavigationLink(destination:)`:
 
 ```text
 Dashboard button
   -> DashboardViewModel.onTransfer
-  -> MainCoordinator.showTransfer()
-  -> attach TransferCoordinator
-  -> UINavigationController.pushViewController
+  -> router.push(.transfer)
+  -> NavigationStack membangun TransferScreen
   -> Transfer selesai/Back/swipe
-  -> finish + parent release child coordinator
+  -> route dilepas dari path
+  -> TransferScreen + TransferViewModel deinit
 ```
 
 Transfer screen menyediakan tab jenis transfer, search, penerima baru, favorite recipient, amount input, confirmation bottom sheet, validation snackbar, service error blocker, dan submit UseCase.
@@ -560,8 +627,8 @@ Salin `Packages/FeatureTemplate`, lalu ikuti rule ini:
 7. Buat `FeatureNameStyle.swift` untuk konstanta visual khusus halaman.
 8. Ambil color, typography, spacing, radius, button, field, dan card dasar dari `DesignSystem`.
 9. Bungkus View dengan `ScreenScaffold`.
-10. Buat Coordinator jika flow perlu push/pop atau output lintas screen.
-11. Callback ViewModel -> Coordinator selalu menangkap `[weak self]`.
+10. Buat `NamaScreen` dengan `@StateObject` sebagai ownership boundary ViewModel.
+11. Tambahkan case pada route enum flow jika layar perlu di-push; callback ViewModel menangkap router dengan `[weak router]`.
 12. Tambahkan package hanya ke composition boundary yang memakainya.
 13. Tambahkan test UseCase, mapping, retry, dan presentation state penting.
 14. Jalankan architecture check, unit test, Memory Graph, Leaks, Time Profiler, dan Core Animation.
@@ -570,7 +637,9 @@ File Style hanya boleh menyimpan visual constant/composition; jangan menaruh net
 
 Definition of done screen:
 
-- Tidak ada SwiftUI navigation API.
+- Tidak ada `NavigationView` maupun `NavigationLink(destination:)`.
+- `navigationDestination(for:)` hanya dipasang sekali pada root stack.
+- ViewModel dibuat lewat `@StateObject` di `NamaScreen`, bukan di dalam closure destination.
 - View/ViewModel tidak mengimpor Alamofire.
 - ViewModel tidak mengimpor UIKit.
 - Loading, empty, success, dan error state terdefinisi.
@@ -578,27 +647,42 @@ Definition of done screen:
 - Task dapat dibatalkan.
 - Bottom sheet, blocker, dan snackbar tersedia melalui scaffold.
 - Dynamic Type, VoiceOver, keyboard, safe area, dan dark mode diuji.
-- Back dan interactive-pop mengembalikan jumlah ViewModel/coordinator ke baseline.
+- Back dan interactive-pop mengembalikan jumlah ViewModel ke baseline.
 
 ## 16. Memory leak guard
 
 Ownership rule:
 
 - `SceneDelegate` strong-own `AppCoordinator`.
-- Parent coordinator strong-own child coordinator.
-- Child coordinator menyimpan parent dan navigation controller secara weak.
-- `UIHostingController` memiliki SwiftUI View/ViewModel.
-- ViewModel tidak memiliki coordinator/controller.
-- Coordinator output closure di ViewModel menggunakan `[weak self]`.
-- `ScreenHostingController.onPopped` di-nil-kan setelah dipanggil.
-- Snackbar dan network task dibatalkan ketika owner dilepas.
+- `AppCoordinator` tidak memiliki satu pun flow; ia hanya mengubah `rootState`.
+- `NavigationRouter` hanya memiliki array route bertipe nilai — tidak pernah View atau ViewModel.
+- `NamaScreen` memiliki ViewModel-nya lewat `@StateObject`; SwiftUI melepasnya saat route dipop.
+- ViewModel tidak memiliki router; callback ke router memakai `[weak router]`.
+- Snackbar dan network task dibatalkan pada `deinit` ViewModel.
+
+Arah kepemilikan berjalan satu arah dan tidak membentuk cycle:
+
+```text
+AppCoordinator  ->  rootState (nilai)
+NavigationRouter ->  [Route] (nilai)
+NamaScreen      ->  ViewModel  ->  closure -> [weak router]
+```
 
 Debug guard:
 
-- `LifecycleProbe` log `INIT`/`DEINIT` untuk ViewModel, coordinator, dan hosting controller.
-- `LeakWatchdog` mengecek object sesudah expected owner dilepas.
-- Launch argument `-assertLeaks` mengubah warning leak menjadi DEBUG assertion.
+- `LifecycleProbe` log `INIT`/`DEINIT` untuk ViewModel dan router.
+- `NavigationRouter` log `PUSH`/`POP` pada kategori navigation, termasuk pop yang dilakukan
+  SwiftUI sendiri lewat tombol Back atau swipe.
+- `LeakWatchdog` tersedia untuk dipanggil manual pada titik yang Anda tahu sebuah object
+  seharusnya sudah dilepas. Template tidak memanggilnya otomatis per layar: `onDisappear`
+  milik SwiftUI tidak dapat membedakan layar yang dipop dari layar yang tertimbun push
+  berikutnya, sehingga wiring otomatis akan menghasilkan false positive.
+- Launch argument `-assertLeaks` mengubah warning `LeakWatchdog` menjadi DEBUG assertion,
+  dan hanya berpengaruh pada pemanggilan manual tersebut.
 - `AppLogger` membagi kategori app/navigation/network/lifecycle/performance/security.
+
+Cara membaca log: satu baris `POP` harus diikuti `DEINIT` milik ViewModel layar tersebut.
+`POP` tanpa `DEINIT` adalah tanda layar masih tertahan.
 
 Logger tidak menjamin aplikasi bebas leak; lakukan Dashboard -> Transfer -> Back minimal 10 kali dan pastikan instance kembali ke baseline pada Xcode Memory Graph dan Instruments Leaks.
 
@@ -606,7 +690,10 @@ Logger tidak menjamin aplikasi bebas leak; lakukan Dashboard -> Transfer -> Back
 
 Target 60 Hz memiliki frame budget sekitar 16,67 ms. Template menyediakan guardrail, bukan janji bahwa seluruh feature masa depan selalu 60 FPS:
 
-- Destination dibuat lazy oleh coordinator.
+- Destination dibangun hanya saat route di-push, bukan saat layar asal dirender.
+- `navigationDestination(for:)` didaftarkan sekali per stack, tidak per baris list.
+- Route memakai enum bertipe, bukan `NavigationPath`, sehingga tidak ada boxing `AnyHashable`.
+- ViewModel dibuat sekali lewat `@StateObject`, jadi re-render tidak merakit ulang UseCase.
 - Tidak ada `AnyView` pada hot path.
 - List panjang memakai `LazyVStack`/`LazyVGrid`.
 - Tidak ada image decoding, formatter berat, atau JSON parsing di `body`.
@@ -629,7 +716,7 @@ Verifikasi pada device fisik:
 | Argument | Hasil |
 |---|---|
 | `-showFPS` | Menampilkan FPS/hitch badge |
-| `-assertLeaks` | DEBUG assertion jika flow object belum deinit setelah grace period |
+| `-assertLeaks` | DEBUG assertion jika object yang dilaporkan ke `LeakWatchdog` belum deinit setelah grace period |
 | `-simulateRootedDevice` | Menampilkan compromised-device root blocker |
 | `-simulateActiveCall` | Menampilkan active-call root blocker |
 | `-simulateSplashFailure` | Splash inquiry mock gagal dan menampilkan retry blocker |
@@ -655,6 +742,7 @@ Jalankan test target dari package `Core`, `FeatureSplash`, `FeatureAuth`, `Featu
 Unit test contoh tersedia untuk:
 
 - Presentation store.
+- Navigation router: push, pop, popToRoot, dan pop yang dipicu SwiftUI sendiri.
 - Authenticator Bearer/header failure marker.
 - Required-mTLS fail-fast saat credential tidak tersedia.
 - Splash launch decision.

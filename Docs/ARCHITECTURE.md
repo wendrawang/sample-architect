@@ -23,13 +23,14 @@ Feature package lain tidak boleh mengimpor feature yang tidak menjadi bagian flo
 ## Ownership and lifetime
 
 - `SceneDelegate` memiliki `AppCoordinator` secara kuat.
-- Coordinator parent memiliki coordinator child secara kuat.
-- Coordinator child memiliki parent secara `weak`.
-- Coordinator hanya memiliki `UINavigationController` secara `weak`.
-- `UIHostingController` memiliki SwiftUI View dan ViewModel.
-- ViewModel tidak pernah memiliki coordinator atau `UIViewController`; output dikirim melalui closure yang menangkap coordinator dengan `[weak self]`.
-- Async task milik ViewModel tidak menangkap ViewModel secara kuat selama menunggu service.
-- Ketika screen dipop dengan tombol Back atau swipe gesture, `ScreenHostingController` memanggil `finish()` agar parent melepas coordinator child.
+- `AppCoordinator` tidak memiliki satu pun flow. Ia hanya mengubah `rootState`, lalu `AppRootView` membongkar flow lama dan membangun flow baru.
+- Satu flow memiliki satu `NavigationRouter<Route>` melalui `@StateObject`.
+- Router hanya memiliki `[Route]`, yaitu nilai. Router tidak pernah memiliki View, ViewModel, atau controller.
+- `NamaScreen` memiliki ViewModel melalui `@StateObject`. SwiftUI melepasnya ketika route dipop.
+- ViewModel tidak pernah memiliki router; output dikirim melalui closure yang menangkap router dengan `[weak router]`.
+- Async task milik ViewModel tidak menangkap ViewModel secara kuat selama menunggu service, dan dibatalkan pada `deinit`.
+
+Karena kepemilikan hanya mengalir satu arah, tidak ada child coordinator yang perlu dilepas secara manual dan tidak ada titik yang bisa membentuk retain cycle.
 
 ## Root state versus screen presentation
 
@@ -39,7 +40,7 @@ Root blocker memiliki prioritas berikut:
 2. Active call
 3. No internet
 
-Root blocker berada di atas navigation controller dan tidak merusak back stack. Bottom sheet, error blocker, dan snackbar milik halaman berada di `ScreenPresentationStore` masing-masing. Dengan begitu, error sebuah inquiry tidak berubah menjadi global app state.
+Root blocker berada di atas flow pada `ZStack` root dan tidak menyentuh `path` milik router, sehingga back stack tetap utuh saat kondisi pulih. Bottom sheet, error blocker, dan snackbar milik halaman berada di `ScreenPresentationStore` masing-masing. Dengan begitu, error sebuah inquiry tidak berubah menjadi global app state.
 
 ## MVVM + UseCase rule
 
@@ -48,7 +49,8 @@ Root blocker berada di atas navigation controller dan tidak merusak back stack. 
 - UseCase: validasi dan business rule.
 - Repository: abstraksi sumber data.
 - Remote Repository: mapping DTO ke domain model.
-- Coordinator: membuat dependency, hosting controller, push/pop, dan menangani output lintas halaman.
+- Screen: ownership boundary satu layar; merakit UseCase dan memiliki ViewModel lewat `@StateObject`.
+- Flow view + Router: mendeklarasikan route, memetakan route ke Screen, dan melakukan push/pop.
 
 DTO tidak boleh bocor ke ViewModel. Alamofire hanya boleh muncul di `CoreNetwork`; feature menggunakan `APIClient` dan Codable.
 

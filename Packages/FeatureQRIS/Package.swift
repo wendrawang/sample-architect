@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "FeatureQRIS",
-    platforms: [.iOS(.v15)],
+    platforms: [.iOS(.v16)],
     products: [
         .library(name: "FeatureQRIS", targets: ["FeatureQRIS"])
     ],

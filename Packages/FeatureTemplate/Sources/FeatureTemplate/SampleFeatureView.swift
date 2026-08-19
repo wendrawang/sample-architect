@@ -41,3 +41,23 @@ public struct SampleFeatureView: View {
         .onAppear(perform: viewModel.onAppear)
     }
 }
+
+/// Ownership boundary for the sample screen — copy this pair when starting a new feature.
+///
+/// The flow that owns this screen declares its own route enum and pushes it through a
+/// `NavigationRouter`; see `MainFlowView` in `FeatureMain` for a wired example.
+public struct SampleFeatureScreen: View {
+    @StateObject private var viewModel: SampleFeatureViewModel
+
+    public init(repository: any SampleFeatureRepositoryProtocol) {
+        _viewModel = StateObject(
+            wrappedValue: SampleFeatureViewModel(
+                useCase: SampleFeatureUseCase(repository: repository)
+            )
+        )
+    }
+
+    public var body: some View {
+        SampleFeatureView(viewModel: viewModel)
+    }
+}

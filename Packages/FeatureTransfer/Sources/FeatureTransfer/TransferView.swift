@@ -210,3 +210,25 @@ public struct TransferView: View {
         }
     }
 }
+
+/// Ownership boundary for the transfer screen. Popping the route releases this view, which
+/// releases the ViewModel, whose `deinit` cancels the in-flight submit and completion tasks.
+public struct TransferScreen: View {
+    @StateObject private var viewModel: TransferViewModel
+
+    public init(
+        repository: any TransferRepositoryProtocol,
+        onFinished: @escaping () -> Void
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: TransferViewModel(
+                submitTransfer: SubmitTransferUseCase(repository: repository),
+                onFinished: onFinished
+            )
+        )
+    }
+
+    public var body: some View {
+        TransferView(viewModel: viewModel)
+    }
+}

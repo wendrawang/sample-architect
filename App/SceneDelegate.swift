@@ -1,4 +1,5 @@
 import CoreKit
+import SwiftUI
 import UIKit
 
 @MainActor
@@ -13,14 +14,22 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     ) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
+        let coordinator = AppCoordinator(configuration: AppConfiguration.load())
         let window = UIWindow(windowScene: windowScene)
-        let coordinator = AppCoordinator(
-            window: window,
-            configuration: AppConfiguration.load()
+        window.rootViewController = UIHostingController(
+            rootView: AppRootView(coordinator: coordinator)
         )
+
         self.window = window
         appCoordinator = coordinator
+        window.makeKeyAndVisible()
         coordinator.start()
+    }
+
+    func sceneDidDisconnect(_ scene: UIScene) {
+        appCoordinator?.stop()
+        appCoordinator = nil
+        window = nil
     }
 
     func sceneDidEnterBackground(_ scene: UIScene) {

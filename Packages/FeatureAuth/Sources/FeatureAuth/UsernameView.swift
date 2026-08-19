@@ -1,3 +1,4 @@
+import CoreNavigation
 import DesignSystem
 import SwiftUI
 
@@ -141,5 +142,26 @@ public struct UsernameView: View {
         }
         .padding(.horizontal, AppSpacing.lg)
         .padding(.bottom, AppSpacing.xxl)
+    }
+}
+
+/// Ownership boundary for the username screen. The ViewModel reaches the router through a
+/// closure that captures it weakly, so the router never ends up owned by what it pushes.
+public struct UsernameScreen: View {
+    @StateObject private var viewModel: UsernameViewModel
+
+    public init(router: NavigationRouter<AuthRoute>) {
+        _viewModel = StateObject(
+            wrappedValue: UsernameViewModel(
+                validateUsername: ValidateUsernameUseCase(),
+                onContinue: { [weak router] username in
+                    router?.push(.password(username: username))
+                }
+            )
+        )
+    }
+
+    public var body: some View {
+        UsernameView(viewModel: viewModel)
     }
 }

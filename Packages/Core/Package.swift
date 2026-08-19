@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Core",
-    platforms: [.iOS(.v15)],
+    platforms: [.iOS(.v16)],
     products: [
         .library(name: "CoreKit", targets: ["CoreKit"]),
         .library(name: "CoreNavigation", targets: ["CoreNavigation"]),
@@ -32,6 +32,10 @@ let package = Package(
         ),
         .target(name: "CorePresentation", dependencies: ["CoreKit"]),
         .target(name: "CoreGuards", dependencies: ["CoreKit"]),
+        .testTarget(
+            name: "CoreNavigationTests",
+            dependencies: ["CoreNavigation"]
+        ),
         .testTarget(
             name: "CorePresentationTests",
             dependencies: ["CorePresentation"]

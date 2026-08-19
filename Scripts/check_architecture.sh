@@ -30,9 +30,17 @@ check_forbidden '^import Feature[A-Za-z]+' \
   --glob '*.swift' \
   --glob '!Packages/FeatureMain/**'
 
-check_forbidden 'Navigation(View|Link|Stack)' \
-  'Navigation SwiftUI dilarang; gunakan Coordinator + UINavigationController.' \
-  Packages/Feature*/Sources --glob '*.swift'
+check_forbidden '\bUINavigationController\b' \
+  'Navigation engine tunggal adalah NavigationStack; jangan menambahkan UINavigationController.' \
+  App Packages --glob '*.swift'
+
+check_forbidden '\bNavigationView\b' \
+  'NavigationView deprecated sejak iOS 16; gunakan NavigationStack.' \
+  App Packages --glob '*.swift'
+
+check_forbidden 'NavigationLink\(destination:' \
+  'NavigationLink(destination:) membangun destination sebelum dibutuhkan; gunakan NavigationLink(value:) atau router.push.' \
+  App Packages --glob '*.swift'
 
 check_forbidden '\bAnyView\b' \
   'AnyView dilarang pada hot path karena menghapus type identity.' \

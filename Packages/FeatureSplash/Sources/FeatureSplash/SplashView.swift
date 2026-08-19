@@ -46,3 +46,30 @@ public struct SplashView: View {
         .onAppear(perform: viewModel.onAppear)
     }
 }
+
+/// Ownership boundary for the splash screen.
+///
+/// `SplashView` stays a pure renderer that takes a ViewModel, which keeps it previewable
+/// and testable. This wrapper is the only place that builds one, and `@StateObject` makes
+/// SwiftUI build it exactly once no matter how often the root re-renders.
+public struct SplashScreen: View {
+    @StateObject private var viewModel: SplashViewModel
+
+    public init(
+        repository: any SplashRepositoryProtocol,
+        onRoute: @escaping (LaunchDestination) -> Void,
+        onUpdateRequested: @escaping () -> Void
+    ) {
+        _viewModel = StateObject(
+            wrappedValue: SplashViewModel(
+                useCase: PrepareLaunchUseCase(repository: repository),
+                onRoute: onRoute,
+                onUpdateRequested: onUpdateRequested
+            )
+        )
+    }
+
+    public var body: some View {
+        SplashView(viewModel: viewModel)
+    }
+}
