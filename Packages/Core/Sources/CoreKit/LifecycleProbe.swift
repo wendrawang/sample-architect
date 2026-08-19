@@ -12,6 +12,6 @@ public final class LifecycleProbe {
     }
 
     deinit {
-        AppLogger.lifecycle.debug("DEINIT \(label, privacy: .public) [\(self.identifier, privacy: .public)]")
+        AppLogger.lifecycle.debug("DEINIT \(self.label, privacy: .public) [\(self.identifier, privacy: .public)]")
     }
 }

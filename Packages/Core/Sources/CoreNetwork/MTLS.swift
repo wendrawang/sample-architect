@@ -151,9 +151,18 @@ public final class PKCS12ClientCredentialProvider: ClientCredentialProviding, @u
         }
         guard let items = importedItems as? [[String: Any]],
               let firstItem = items.first,
-              let identity = firstItem[kSecImportItemIdentity as String] as? SecIdentity else {
+              let identityValue = firstItem[kSecImportItemIdentity as String] else {
             throw PKCS12CredentialError.identityMissing
         }
+
+        // `SecIdentity` is a CoreFoundation type, so a conditional cast from `Any` always
+        // succeeds and would happily hand back the wrong object. Verify the real CF type
+        // id first; only then is the forced cast provably safe.
+        let identityRef = identityValue as CFTypeRef
+        guard CFGetTypeID(identityRef) == SecIdentityGetTypeID() else {
+            throw PKCS12CredentialError.identityMissing
+        }
+        let identity = identityRef as! SecIdentity
 
         let chain = firstItem[kSecImportItemCertChain as String] as? [Any]
         let credential = URLCredential(
