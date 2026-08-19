@@ -6,6 +6,7 @@ Template aplikasi mobile banking iOS 16+ dengan:
 - `NavigationStack` sebagai satu-satunya navigation engine.
 - MVVM + Router + UseCase + Repository.
 - Local Swift Package per core concern dan per feature flow.
+- Swift 6 language mode dengan strict concurrency penuh; lihat `Docs/SWIFT_CONCURRENCY.md`.
 - Alamofire `5.12.0` dengan `Encodable`/`Decodable`, async/await, mTLS, Bearer authentication, controlled token refresh, request signing, download, dan tracing adapter.
 - Bottom sheet, screen-level error blocker, dan snackbar pada setiap halaman.
 - Root blocker untuk tidak ada internet, compromised/rooted device, dan panggilan aktif.
@@ -772,6 +773,7 @@ Sesuaikan nama simulator dengan runtime yang terpasang.
 - `Docs/API_CONTRACT.md` — placeholder contract Codable.
 - `Docs/NEW_FEATURE_GUIDE.md` — checklist feature baru.
 - `Docs/PERFORMANCE_AND_LEAKS.md` — prosedur Instruments.
+- `Docs/SWIFT_CONCURRENCY.md` — `async`/`await`, `Task`, `@MainActor`, dan `Sendable` untuk pembaca yang terbiasa GCD.
 
 Referensi upstream:
 

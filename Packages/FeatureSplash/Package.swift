@@ -26,5 +26,5 @@ let package = Package(
             dependencies: ["FeatureSplash"]
         )
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )

@@ -8,7 +8,10 @@ public enum DeviceIntegrityStatus: Equatable, Sendable {
     case compromised
 }
 
-public protocol DeviceIntegrityChecking {
+/// Sendable because `RootGuardMonitor` is itself Sendable and stores one of these. Both
+/// shipped implementations are stateless structs, and a real RASP adapter must be safe to
+/// call from whatever thread the guard happens to run on anyway.
+public protocol DeviceIntegrityChecking: Sendable {
     func evaluate() -> DeviceIntegrityStatus
 }
 

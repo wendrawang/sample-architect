@@ -26,6 +26,6 @@ let package = Package(
             dependencies: ["FeatureDashboard"]
         )
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )
 

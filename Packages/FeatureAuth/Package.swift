@@ -27,6 +27,6 @@ let package = Package(
             dependencies: ["FeatureAuth"]
         )
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )
 

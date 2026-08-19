@@ -27,5 +27,5 @@ let package = Package(
             dependencies: ["FeatureTemplate"]
         )
     ],
-    swiftLanguageModes: [.v5]
+    swiftLanguageModes: [.v6]
 )
