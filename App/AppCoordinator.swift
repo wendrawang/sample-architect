@@ -69,9 +69,13 @@ final class AppCoordinator: ObservableObject {
         )
 
         apiClient.updateCredential(initialCredential)
+        // The handler is `@Sendable` and runs off the main actor, so the task does not
+        // inherit isolation. Pin it to `@MainActor` rather than awaiting through an
+        // optional chain — `await self?.method()` has to hop actors and unwrap in the same
+        // expression, which is what the type checker cannot resolve.
         apiClient.setUnauthorizedHandler { [weak self] in
-            Task { [weak self] in
-                await self?.handleUnauthorizedSession()
+            Task { @MainActor in
+                self?.handleUnauthorizedSession()
             }
         }
     }
