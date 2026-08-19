@@ -1,12 +1,15 @@
 import Foundation
 
-public enum PresentationActionRole: Equatable {
+// Every model here holds only value types, but a public type never gets implicit
+// `Sendable` inference — the conformance is API surface, so it has to be written out.
+
+public enum PresentationActionRole: Equatable, Sendable {
     case primary
     case secondary
     case destructive
 }
 
-public struct PresentationAction: Identifiable, Equatable {
+public struct PresentationAction: Identifiable, Equatable, Sendable {
     public let id: String
     public let title: String
     public let role: PresentationActionRole
@@ -25,7 +28,7 @@ public struct PresentationAction: Identifiable, Equatable {
     }
 }
 
-public struct BottomSheetModel: Identifiable, Equatable {
+public struct BottomSheetModel: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let iconSystemName: String?
     public let title: String
@@ -50,7 +53,7 @@ public struct BottomSheetModel: Identifiable, Equatable {
     }
 }
 
-public struct ScreenBlockerModel: Identifiable, Equatable {
+public struct ScreenBlockerModel: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let iconSystemName: String
     public let title: String
@@ -72,7 +75,7 @@ public struct ScreenBlockerModel: Identifiable, Equatable {
     }
 }
 
-public struct SnackbarModel: Identifiable, Equatable {
+public struct SnackbarModel: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let message: String
     public let iconSystemName: String?

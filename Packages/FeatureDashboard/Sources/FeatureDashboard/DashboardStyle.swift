@@ -14,7 +14,10 @@ enum DashboardStyle {
         GridItem(.flexible(), spacing: AppSpacing.sm),
         GridItem(.flexible(), spacing: AppSpacing.sm)
     ]
-    static let currencyFormatter: NumberFormatter = {
+    /// `NumberFormatter` is a mutable class and can never be `Sendable`. This one is
+    /// configured once here and only read afterwards, and formatting has been thread-safe
+    /// since iOS 7 — building a fresh formatter per row would be the actual frame-time risk.
+    nonisolated(unsafe) static let currencyFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = "IDR"

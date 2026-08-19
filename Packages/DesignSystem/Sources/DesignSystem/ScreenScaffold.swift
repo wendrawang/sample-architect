@@ -1,7 +1,11 @@
 import CorePresentation
 import SwiftUI
 
-public struct ScreenStyle {
+/// `Sendable` is spelled out because Swift only infers it for non-public types: for a
+/// public one the conformance is part of the API contract, so the compiler refuses to
+/// commit you to it silently. Without it the `static let` presets below count as shared
+/// mutable state.
+public struct ScreenStyle: Sendable {
     public let background: Color
     public let horizontalPadding: CGFloat
     public let snackbarBottomPadding: CGFloat
