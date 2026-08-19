@@ -16,7 +16,7 @@ public struct MoreView: View {
         ) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    Text("More")
+                    Text("Lainnya")
                         .font(AppTypography.title)
                     profileCard
                     menuList
@@ -95,4 +95,3 @@ public struct MoreView: View {
         .buttonStyle(ScaleButtonStyle())
     }
 }
-

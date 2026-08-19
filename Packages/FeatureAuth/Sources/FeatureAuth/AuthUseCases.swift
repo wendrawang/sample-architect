@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol ValidateUsernameUseCaseProtocol {
+public protocol ValidateUsernameUseCaseProtocol: Sendable {
     func execute(_ username: String) throws -> String
 }
 
@@ -16,14 +16,14 @@ public struct ValidateUsernameUseCase: ValidateUsernameUseCaseProtocol {
     }
 }
 
-public protocol LoginUseCaseProtocol {
+public protocol LoginUseCaseProtocol: Sendable {
     func execute(username: String, password: String) async throws -> AuthSession
 }
 
 public final class LoginUseCase: LoginUseCaseProtocol {
-    private let repository: AuthRepositoryProtocol
+    private let repository: any AuthRepositoryProtocol
 
-    public init(repository: AuthRepositoryProtocol) {
+    public init(repository: any AuthRepositoryProtocol) {
         self.repository = repository
     }
 
@@ -34,4 +34,3 @@ public final class LoginUseCase: LoginUseCaseProtocol {
         return try await repository.login(username: username, password: password)
     }
 }
-

@@ -51,7 +51,6 @@ public enum NavigationAppearance {
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
         UINavigationBar.appearance().compactAppearance = appearance
-        UINavigationBar.appearance().tintColor = UIColor(red: 0.09, green: 0.32, blue: 0.76, alpha: 1)
+        UINavigationBar.appearance().tintColor = UIColor(red: 0.91, green: 0.03, blue: 0.08, alpha: 1)
     }
 }
-

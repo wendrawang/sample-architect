@@ -1,5 +1,6 @@
 import CoreKit
 import CoreNavigation
+import DesignSystem
 import UIKit
 
 @main
@@ -10,6 +11,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         NavigationAppearance.applyGlobalStyle()
+        AppTabBarAppearance.apply()
         AppLogger.app.info("Application did finish launching")
         return true
     }

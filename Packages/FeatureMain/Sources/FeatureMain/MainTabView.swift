@@ -41,13 +41,13 @@ public struct MainTabView: View {
                 DashboardView(viewModel: dashboardViewModel)
                     .tag(MainTab.dashboard)
                     .tabItem {
-                        Label("Dashboard", systemImage: "house.fill")
+                        Label("Beranda", systemImage: "house.fill")
                     }
 
                 FinancialView(viewModel: financialViewModel)
                     .tag(MainTab.financial)
                     .tabItem {
-                        Label("Financial", systemImage: "chart.line.uptrend.xyaxis")
+                        Label("Finansial", systemImage: "chart.pie.fill")
                     }
 
                 QRISView(viewModel: qrisViewModel)
@@ -65,7 +65,7 @@ public struct MainTabView: View {
                 MoreView(viewModel: moreViewModel)
                     .tag(MainTab.more)
                     .tabItem {
-                        Label("More", systemImage: "ellipsis.circle.fill")
+                        Label("Lainnya", systemImage: "circle.grid.2x2.fill")
                     }
             }
             .tint(AppColor.brand)
@@ -79,10 +79,7 @@ public struct MainTabView: View {
                 more: moreViewModel.presentation,
                 action: viewModel.selectQRIS
             )
-            .padding(.bottom, 4)
-        }
-        .onAppear {
-            AppTabBarAppearance.apply()
+            .padding(.bottom, MainTabStyle.centerButtonBottomPadding)
         }
     }
 }
@@ -115,9 +112,13 @@ private struct CenterQRISOverlay: View {
                         )
                         .shadow(color: AppColor.brand.opacity(0.34), radius: 10, x: 0, y: 6)
 
-                    Image(systemName: "qrcode.viewfinder")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
+                    VStack(spacing: 1) {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 22, weight: .bold))
+                        Text("QRIS")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundColor(.white)
                 }
             }
             .buttonStyle(ScaleButtonStyle())

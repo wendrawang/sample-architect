@@ -4,12 +4,12 @@ import UIKit
 
 @MainActor
 public final class AuthCoordinator: NavigationCoordinator {
-    private let repository: AuthRepositoryProtocol
+    private let repository: any AuthRepositoryProtocol
     private let onAuthenticated: (AuthSession) -> Void
 
     public init(
         navigationController: UINavigationController,
-        repository: AuthRepositoryProtocol,
+        repository: any AuthRepositoryProtocol,
         onAuthenticated: @escaping (AuthSession) -> Void
     ) {
         self.repository = repository
@@ -45,7 +45,7 @@ public final class AuthCoordinator: NavigationCoordinator {
         )
         let controller = ScreenHostingController(
             rootView: PasswordView(viewModel: viewModel),
-            title: "Login"
+            title: "Masukkan Password"
         )
         controller.onPopped = {
             AppLogger.navigation.debug("Password screen popped")
@@ -53,4 +53,3 @@ public final class AuthCoordinator: NavigationCoordinator {
         navigationController?.pushViewController(controller, animated: true)
     }
 }
-

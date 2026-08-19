@@ -1,27 +1,48 @@
+import CoreNetwork
 import Foundation
 
 /// In-memory session only. Replace or extend with the company's secure storage abstraction.
-final class AppSessionStore {
+final class AppSessionStore: @unchecked Sendable {
     private let lock = NSLock()
-    private var accessToken: String?
+    private var credential: OAuthCredential?
+    private var sessionID: String?
 
-    func save(accessToken: String) {
+    init(initialCredential: OAuthCredential? = nil) {
+        credential = initialCredential
+        sessionID = initialCredential == nil ? nil : UUID().uuidString
+    }
+
+    func save(credential: OAuthCredential) {
         lock.lock()
-        self.accessToken = accessToken
+        self.credential = credential
+        sessionID = UUID().uuidString
+        lock.unlock()
+    }
+
+    /// Refresh must replace only the token material and preserve the logical
+    /// app session ID used by downstream headers and tracing.
+    func updateCredential(_ credential: OAuthCredential) {
+        lock.lock()
+        self.credential = credential
         lock.unlock()
     }
 
     func clear() {
         lock.lock()
-        accessToken = nil
+        credential = nil
+        sessionID = nil
         lock.unlock()
     }
 
-    func authorizationHeaders() -> [String: String] {
+    func currentCredential() -> OAuthCredential? {
         lock.lock()
         defer { lock.unlock() }
-        guard let accessToken else { return [:] }
-        return ["Authorization": "Bearer \(accessToken)"]
+        return credential
+    }
+
+    func currentSessionID() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return sessionID
     }
 }
-

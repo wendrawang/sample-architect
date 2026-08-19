@@ -8,6 +8,7 @@ Template ini menghilangkan penyebab umum navigation lag: tidak ada hidden `Navig
 - Tambahkan `-assertLeaks` agar object yang belum terlepas setelah 5 detik memicu assertion di DEBUG.
 - Logger kategori `lifecycle` mencetak `INIT`/`DEINIT` setiap ViewModel, coordinator, dan hosting controller.
 - `PerformanceTracer` menghasilkan signpost yang dapat dibaca lewat Instruments Points of Interest.
+- `AlamofireAPIClient` hanya memakai nama signpost statis; request path dicatat terpisah oleh privacy-aware logger agar signpost murah dan valid.
 
 ## Verifikasi sebelum release
 
@@ -19,4 +20,3 @@ Template ini menghilangkan penyebab umum navigation lag: tidak ada hidden `Navig
 6. Uji response besar. Mapping/formatting berat harus dipindahkan dari main actor sebelum state final diterapkan.
 
 Tidak ada arsitektur yang dapat menjamin 60 FPS untuk semua feature. Template ini menyediakan ownership yang deterministik dan alat ukur; hasil akhir tetap bergantung pada kompleksitas View, ukuran data, image decoding, SDK pihak ketiga, dan pekerjaan di main thread.
-

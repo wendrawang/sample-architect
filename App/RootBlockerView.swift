@@ -10,11 +10,11 @@ struct RootBlockerView: View {
 
     var body: some View {
         ZStack {
-            AppColor.elevatedSurface.ignoresSafeArea()
+            RootBlockerStyle.background.ignoresSafeArea()
 
             VStack(spacing: AppSpacing.lg) {
                 Image(systemName: content.icon)
-                    .font(.system(size: 58, weight: .semibold))
+                    .font(.system(size: RootBlockerStyle.iconSize, weight: .semibold))
                     .foregroundColor(content.color)
 
                 VStack(spacing: AppSpacing.xs) {
@@ -29,7 +29,7 @@ struct RootBlockerView: View {
 
                 if reason == .noInternet {
                     PrimaryButton("Coba Lagi", action: onRetry)
-                        .frame(maxWidth: 280)
+                        .frame(maxWidth: RootBlockerStyle.actionMaxWidth)
                 }
             }
             .padding(AppSpacing.xl)

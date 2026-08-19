@@ -9,14 +9,14 @@ public final class DashboardViewModel: ObservableObject {
     @Published public private(set) var isLoading = false
     public let presentation = ScreenPresentationStore()
 
-    private let getSummary: GetDashboardSummaryUseCaseProtocol
+    private let getSummary: any GetDashboardSummaryUseCaseProtocol
     private let onTransfer: () -> Void
     private let lifecycleProbe = LifecycleProbe("DashboardViewModel")
     private var loadTask: Task<Void, Never>?
     private var hasLoaded = false
 
     public init(
-        getSummary: GetDashboardSummaryUseCaseProtocol,
+        getSummary: any GetDashboardSummaryUseCaseProtocol,
         onTransfer: @escaping () -> Void
     ) {
         self.getSummary = getSummary
@@ -105,4 +105,3 @@ public final class DashboardViewModel: ObservableObject {
         loadTask?.cancel()
     }
 }
-

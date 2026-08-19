@@ -11,44 +11,56 @@ public struct PasswordView: View {
     public var body: some View {
         ScreenScaffold(
             presentation: viewModel.presentation,
+            style: ScreenStyle(background: .white),
             onAction: viewModel.handlePresentationAction
         ) {
-            VStack(spacing: AppSpacing.lg) {
-                Spacer(minLength: AppSpacing.xl)
+            VStack(alignment: .leading, spacing: AppSpacing.lg) {
+                Text("Masukkan Password kamu\nuntuk login ke OCBC mobile")
+                    .font(AppTypography.title)
+                    .fontWeight(.regular)
+                    .padding(.top, AppSpacing.lg)
 
-                Image(systemName: "person.fill")
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundColor(AppColor.brand)
-                    .frame(width: PasswordStyle.avatarSize, height: PasswordStyle.avatarSize)
-                    .background(PasswordStyle.iconBackground)
-                    .clipShape(Circle())
-
-                VStack(spacing: AppSpacing.xs) {
-                    Text("Halo, \(viewModel.username)")
-                        .font(AppTypography.title)
-                    Text("Masukkan password untuk melanjutkan")
-                        .font(AppTypography.body)
-                        .foregroundColor(AppColor.secondaryText)
-                }
-
-                AppTextField(
-                    title: "Password",
-                    placeholder: "Minimal 6 karakter",
+                BankInputCard(
+                    title: "Password Login",
+                    placeholder: "Masukkan password login kamu",
                     text: $viewModel.password,
                     isSecure: true
                 )
 
-                PrimaryButton(
-                    "Masuk",
-                    isLoading: viewModel.isLoading,
-                    isEnabled: viewModel.password.count >= 6,
-                    action: viewModel.didTapLogin
-                )
+                Button("Lupa atau Belum Punya Password?", action: viewModel.didTapForgotPassword)
+                    .font(AppTypography.label)
+                    .foregroundColor(AppColor.brand)
+                    .underline()
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, AppSpacing.lg)
 
-                Spacer()
+                Spacer(minLength: AppSpacing.xl)
+
+                HStack(spacing: AppSpacing.md) {
+                    Button(action: viewModel.didTapBiometric) {
+                        Image(systemName: "faceid")
+                            .font(.system(size: 27, weight: .medium))
+                            .foregroundColor(AppColor.primaryText)
+                            .frame(
+                                width: PasswordStyle.biometricButtonWidth,
+                                height: PasswordStyle.biometricButtonHeight
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: AppRadius.medium)
+                                    .stroke(PasswordStyle.biometricBorder, lineWidth: 1.4)
+                            )
+                    }
+                    .buttonStyle(ScaleButtonStyle())
+
+                    PrimaryButton(
+                        "Lanjut",
+                        isLoading: viewModel.isLoading,
+                        isEnabled: viewModel.password.count >= 6,
+                        action: viewModel.didTapLogin
+                    )
+                }
+                .padding(.bottom, AppSpacing.md)
             }
-            .padding(.vertical, AppSpacing.lg)
         }
     }
 }
-

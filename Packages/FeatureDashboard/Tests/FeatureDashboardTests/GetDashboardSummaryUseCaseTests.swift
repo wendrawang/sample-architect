@@ -1,7 +1,7 @@
 import FeatureDashboard
 import XCTest
 
-private final class DashboardRepositorySpy: DashboardRepositoryProtocol {
+private final class DashboardRepositorySpy: DashboardRepositoryProtocol, @unchecked Sendable {
     private(set) var callCount = 0
 
     func getSummary() async throws -> DashboardSummary {
@@ -26,4 +26,3 @@ final class GetDashboardSummaryUseCaseTests: XCTestCase {
         XCTAssertEqual(repository.callCount, 1)
     }
 }
-

@@ -21,6 +21,7 @@ let package = Package(
         .target(
             name: "FeatureMain",
             dependencies: [
+                .product(name: "CoreKit", package: "Core"),
                 .product(name: "CoreNavigation", package: "Core"),
                 .product(name: "CoreNetwork", package: "Core"),
                 .product(name: "CorePresentation", package: "Core"),

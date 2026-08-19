@@ -1,13 +1,13 @@
 import Foundation
 
-public protocol SubmitTransferUseCaseProtocol {
+public protocol SubmitTransferUseCaseProtocol: Sendable {
     func execute(destinationAccount: String, amountText: String) async throws -> TransferReceipt
 }
 
 public final class SubmitTransferUseCase: SubmitTransferUseCaseProtocol {
-    private let repository: TransferRepositoryProtocol
+    private let repository: any TransferRepositoryProtocol
 
-    public init(repository: TransferRepositoryProtocol) {
+    public init(repository: any TransferRepositoryProtocol) {
         self.repository = repository
     }
 
@@ -33,4 +33,3 @@ public final class SubmitTransferUseCase: SubmitTransferUseCaseProtocol {
         )
     }
 }
-

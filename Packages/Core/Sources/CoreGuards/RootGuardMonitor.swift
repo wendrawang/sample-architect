@@ -3,7 +3,7 @@ import CoreKit
 import Foundation
 import Network
 
-public enum DeviceIntegrityStatus: Equatable {
+public enum DeviceIntegrityStatus: Equatable, Sendable {
     case trusted
     case compromised
 }
@@ -20,7 +20,7 @@ public struct TrustedDeviceIntegrityChecker: DeviceIntegrityChecking {
     }
 }
 
-public enum RootBlockerReason: Equatable {
+public enum RootBlockerReason: String, Equatable, Sendable {
     case noInternet
     case compromisedDevice
     case activeCall
@@ -37,6 +37,7 @@ public final class RootGuardMonitor: NSObject, RootGuardMonitoring {
     public var onReasonChanged: ((RootBlockerReason?) -> Void)?
 
     private let integrityChecker: DeviceIntegrityChecking
+    private let simulatesActiveCall: Bool
     private let pathMonitor = NWPathMonitor()
     private let pathQueue = DispatchQueue(label: "com.modularbank.network-path")
     private let callObserver = CXCallObserver()
@@ -47,8 +48,12 @@ public final class RootGuardMonitor: NSObject, RootGuardMonitoring {
     private var lastPublishedReason: RootBlockerReason?
     private var isStarted = false
 
-    public init(integrityChecker: DeviceIntegrityChecking) {
+    public init(
+        integrityChecker: DeviceIntegrityChecking,
+        simulatesActiveCall: Bool = false
+    ) {
         self.integrityChecker = integrityChecker
+        self.simulatesActiveCall = simulatesActiveCall
         super.init()
     }
 
@@ -59,7 +64,7 @@ public final class RootGuardMonitor: NSObject, RootGuardMonitoring {
 
         isCompromised = integrityChecker.evaluate() == .compromised
         callObserver.setDelegate(self, queue: .main)
-        hasActiveCall = callObserver.calls.contains { !$0.hasEnded }
+        hasActiveCall = simulatesActiveCall || callObserver.calls.contains { !$0.hasEnded }
 
         pathMonitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async { [weak self] in
@@ -113,7 +118,8 @@ extension RootGuardMonitor: CXCallObserverDelegate {
     public func callObserver(_ callObserver: CXCallObserver, callChanged call: CXCall) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.hasActiveCall = callObserver.calls.contains { !$0.hasEnded }
+            self.hasActiveCall = self.simulatesActiveCall
+                || callObserver.calls.contains { !$0.hasEnded }
             self.publishIfNeeded()
         }
     }

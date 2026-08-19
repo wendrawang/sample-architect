@@ -11,37 +11,38 @@ public struct SplashView: View {
     public var body: some View {
         ScreenScaffold(
             presentation: viewModel.presentation,
-            style: .edgeToEdge
+            style: .edgeToEdge,
+            onAction: viewModel.handlePresentationAction
         ) {
             ZStack {
                 SplashStyle.background.ignoresSafeArea()
 
-                VStack(spacing: AppSpacing.lg) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: AppRadius.large, style: .continuous)
-                            .fill(Color.white)
-                            .frame(width: SplashStyle.logoSize, height: SplashStyle.logoSize)
+                VStack(spacing: 0) {
+                    Spacer()
 
-                        Image(systemName: "building.columns.fill")
-                            .font(.system(size: 40, weight: .bold))
-                            .foregroundColor(AppColor.brand)
+                    VStack(spacing: AppSpacing.md) {
+                        BankBrandLogo(size: .large)
+
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .tint(AppColor.brand)
+                                .scaleEffect(0.82)
+                                .accessibilityLabel("Menyiapkan aplikasi")
+                        }
                     }
 
-                    VStack(spacing: AppSpacing.xs) {
-                        Text("Modular Bank")
-                            .font(AppTypography.hero)
-                            .foregroundColor(.white)
-                        Text("Secure. Fast. Modular.")
-                            .font(AppTypography.body)
-                            .foregroundColor(.white.opacity(0.78))
-                    }
+                    Spacer()
 
-                    ProgressView()
-                        .tint(.white)
+                    Text("Hak Cipta 2026, PT Bank OCBC NISP Tbk berizin dan diawasi oleh Otoritas Jasa Keuangan & Bank Indonesia, serta merupakan peserta penjaminan LPS.")
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColor.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(3)
+                        .padding(.horizontal, AppSpacing.xl)
+                        .padding(.bottom, AppSpacing.xl)
                 }
             }
         }
         .onAppear(perform: viewModel.onAppear)
     }
 }
-

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DashboardTransaction: Identifiable, Equatable {
+public struct DashboardTransaction: Identifiable, Equatable, Sendable {
     public let id: String
     public let title: String
     public let subtitle: String
@@ -14,7 +14,7 @@ public struct DashboardTransaction: Identifiable, Equatable {
     }
 }
 
-public struct DashboardSummary: Equatable {
+public struct DashboardSummary: Equatable, Sendable {
     public let customerName: String
     public let accountNumber: String
     public let availableBalance: Decimal
@@ -33,7 +33,6 @@ public struct DashboardSummary: Equatable {
     }
 }
 
-public protocol DashboardRepositoryProtocol {
+public protocol DashboardRepositoryProtocol: Sendable {
     func getSummary() async throws -> DashboardSummary
 }
-

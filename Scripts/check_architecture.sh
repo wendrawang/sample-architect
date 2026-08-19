@@ -20,6 +20,16 @@ check_forbidden 'import UIKit' \
   'ViewModel tidak boleh bergantung pada UIKit.' \
   Packages/Feature*/Sources --glob '*ViewModel.swift'
 
+check_forbidden 'import Alamofire' \
+  'Feature tidak boleh bergantung langsung pada Alamofire; gunakan CoreNetwork.APIClient.' \
+  Packages/Feature*/Sources --glob '*.swift'
+
+check_forbidden '^import Feature[A-Za-z]+' \
+  'Feature biasa tidak boleh mengimpor feature lain; lakukan composition di FeatureMain.' \
+  Packages/Feature*/Sources \
+  --glob '*.swift' \
+  --glob '!Packages/FeatureMain/**'
+
 check_forbidden 'Navigation(View|Link|Stack)' \
   'Navigation SwiftUI dilarang; gunakan Coordinator + UINavigationController.' \
   Packages/Feature*/Sources --glob '*.swift'
@@ -37,4 +47,3 @@ if [[ "$failed" -ne 0 ]]; then
 fi
 
 echo "Architecture checks passed."
-

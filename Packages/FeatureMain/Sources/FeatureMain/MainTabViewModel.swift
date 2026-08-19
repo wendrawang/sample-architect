@@ -1,4 +1,5 @@
 import Combine
+import CoreKit
 import Foundation
 
 public enum MainTab: Int, CaseIterable {
@@ -12,6 +13,7 @@ public enum MainTab: Int, CaseIterable {
 @MainActor
 public final class MainTabViewModel: ObservableObject {
     @Published public var selection: MainTab = .dashboard
+    private let lifecycleProbe = LifecycleProbe("MainTabViewModel")
 
     public init() {}
 
@@ -19,4 +21,3 @@ public final class MainTabViewModel: ObservableObject {
         selection = .qris
     }
 }
-

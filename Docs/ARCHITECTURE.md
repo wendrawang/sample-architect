@@ -52,3 +52,16 @@ Root blocker berada di atas navigation controller dan tidak merusak back stack. 
 
 DTO tidak boleh bocor ke ViewModel. Alamofire hanya boleh muncul di `CoreNetwork`; feature menggunakan `APIClient` dan Codable.
 
+## Network pipeline
+
+```text
+Remote Repository
+  -> Endpoint<Response: Decodable>
+  -> APIClient
+  -> Bearer AuthenticationInterceptor (bila required)
+  -> metadata + signature RequestAdapter
+  -> per-request mTLS URLCredential untuk allowlisted host
+  -> validate + decode
+```
+
+Urutan auth sebelum signature disengaja. Retry setelah token refresh menjalankan ulang adaptation sehingga signature tidak pernah memakai access token/timestamp lama. mTLS client identity dan server-trust/pinning adalah concern berbeda; jangan mengganti platform trust dengan evaluator accept-all.

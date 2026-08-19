@@ -12,7 +12,7 @@ public struct FinancialView: View {
         ScreenScaffold(presentation: viewModel.presentation, style: .tab) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: AppSpacing.lg) {
-                    Text("Financial")
+                    Text("Finansial")
                         .font(AppTypography.title)
 
                     portfolioCard
@@ -69,4 +69,3 @@ public struct FinancialView: View {
         }
     }
 }
-

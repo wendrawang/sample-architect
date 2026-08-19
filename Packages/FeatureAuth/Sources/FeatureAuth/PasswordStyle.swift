@@ -2,7 +2,7 @@ import DesignSystem
 import SwiftUI
 
 enum PasswordStyle {
-    static let avatarSize: CGFloat = 64
-    static let iconBackground = AppColor.brand.opacity(0.1)
+    static let biometricButtonWidth: CGFloat = 58
+    static let biometricButtonHeight: CGFloat = 54
+    static let biometricBorder = AppColor.brand
 }
-

@@ -16,11 +16,15 @@ let package = Package(
             name: "FeatureSplash",
             dependencies: [
                 .product(name: "CoreKit", package: "Core"),
+                .product(name: "CoreNetwork", package: "Core"),
                 .product(name: "CorePresentation", package: "Core"),
                 .product(name: "DesignSystem", package: "DesignSystem")
             ]
+        ),
+        .testTarget(
+            name: "FeatureSplashTests",
+            dependencies: ["FeatureSplash"]
         )
     ],
     swiftLanguageModes: [.v5]
 )
-

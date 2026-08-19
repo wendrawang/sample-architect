@@ -2,13 +2,13 @@ import CoreNetwork
 import FeatureDashboard
 import FeatureTransfer
 
-public struct MainDependencies {
-    let dashboardRepository: DashboardRepositoryProtocol
-    let transferRepository: TransferRepositoryProtocol
+public struct MainDependencies: Sendable {
+    let dashboardRepository: any DashboardRepositoryProtocol
+    let transferRepository: any TransferRepositoryProtocol
 
     public init(
-        dashboardRepository: DashboardRepositoryProtocol,
-        transferRepository: TransferRepositoryProtocol
+        dashboardRepository: any DashboardRepositoryProtocol,
+        transferRepository: any TransferRepositoryProtocol
     ) {
         self.dashboardRepository = dashboardRepository
         self.transferRepository = transferRepository
@@ -31,4 +31,3 @@ public struct MainDependencies {
         )
     }
 }
-

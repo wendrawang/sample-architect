@@ -81,7 +81,12 @@ schemes:
       config: Debug
       commandLineArguments:
         "-showFPS": false
+        "-assertLeaks": false
         "-simulateRootedDevice": false
+        "-simulateActiveCall": false
+        "-simulateSplashFailure": false
+        "-simulateMaintenance": false
+        "-simulateForceUpdate": false
         "-useLiveServices": false
     test:
       config: Debug

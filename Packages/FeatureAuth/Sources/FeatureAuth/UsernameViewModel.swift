@@ -12,12 +12,12 @@ public final class UsernameViewModel: ObservableObject {
         username.trimmingCharacters(in: .whitespacesAndNewlines).count >= 3
     }
 
-    private let validateUsername: ValidateUsernameUseCaseProtocol
+    private let validateUsername: any ValidateUsernameUseCaseProtocol
     private let onContinue: (String) -> Void
     private let lifecycleProbe = LifecycleProbe("UsernameViewModel")
 
     public init(
-        validateUsername: ValidateUsernameUseCaseProtocol,
+        validateUsername: any ValidateUsernameUseCaseProtocol,
         onContinue: @escaping (String) -> Void
     ) {
         self.validateUsername = validateUsername
@@ -61,4 +61,3 @@ public final class UsernameViewModel: ObservableObject {
         )
     }
 }
-

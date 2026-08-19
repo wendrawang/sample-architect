@@ -35,8 +35,14 @@ let package = Package(
         .testTarget(
             name: "CorePresentationTests",
             dependencies: ["CorePresentation"]
+        ),
+        .testTarget(
+            name: "CoreNetworkTests",
+            dependencies: [
+                "CoreNetwork",
+                .product(name: "Alamofire", package: "Alamofire")
+            ]
         )
     ],
     swiftLanguageModes: [.v5]
 )
-

@@ -1,13 +1,13 @@
 import CoreNetwork
 import Foundation
 
-private struct DashboardSummaryDTO: Decodable {
+private struct DashboardSummaryDTO: Decodable, Sendable {
     let customerName: String
     let accountNumber: String
     let availableBalance: Decimal
     let transactions: [TransactionDTO]
 
-    struct TransactionDTO: Decodable {
+    struct TransactionDTO: Decodable, Sendable {
         let id: String
         let title: String
         let subtitle: String
@@ -15,7 +15,7 @@ private struct DashboardSummaryDTO: Decodable {
     }
 }
 
-public final class RemoteDashboardRepository: DashboardRepositoryProtocol {
+public final class RemoteDashboardRepository: DashboardRepositoryProtocol, @unchecked Sendable {
     private let apiClient: any APIClient
 
     public init(apiClient: any APIClient) {
@@ -23,7 +23,11 @@ public final class RemoteDashboardRepository: DashboardRepositoryProtocol {
     }
 
     public func getSummary() async throws -> DashboardSummary {
-        let endpoint = Endpoint<DashboardSummaryDTO>(path: "/v1/dashboard/summary")
+        let endpoint = Endpoint<DashboardSummaryDTO>(
+            path: "/v1/dashboard/summary",
+            authorization: .bearer,
+            signature: .required
+        )
         let dto = try await apiClient.request(endpoint)
         return DashboardSummary(
             customerName: dto.customerName,
@@ -41,7 +45,7 @@ public final class RemoteDashboardRepository: DashboardRepositoryProtocol {
     }
 }
 
-public final class MockDashboardRepository: DashboardRepositoryProtocol {
+public final class MockDashboardRepository: DashboardRepositoryProtocol, @unchecked Sendable {
     public init() {}
 
     public func getSummary() async throws -> DashboardSummary {
@@ -75,4 +79,3 @@ public final class MockDashboardRepository: DashboardRepositoryProtocol {
         )
     }
 }
-

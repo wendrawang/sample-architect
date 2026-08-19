@@ -3,7 +3,7 @@ import Foundation
 import QuartzCore
 import os.signpost
 
-public final class PerformanceInterval {
+public final class PerformanceInterval: @unchecked Sendable {
     private let log: OSLog
     private let identifier: OSSignpostID
     private let name: StaticString

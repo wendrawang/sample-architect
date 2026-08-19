@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TransferReceipt: Equatable {
+public struct TransferReceipt: Equatable, Sendable {
     public let referenceNumber: String
     public let amount: Decimal
 
@@ -10,11 +10,11 @@ public struct TransferReceipt: Equatable {
     }
 }
 
-public protocol TransferRepositoryProtocol {
+public protocol TransferRepositoryProtocol: Sendable {
     func submit(destinationAccount: String, amount: Decimal) async throws -> TransferReceipt
 }
 
-public enum TransferValidationError: Error, LocalizedError, Equatable {
+public enum TransferValidationError: Error, LocalizedError, Equatable, Sendable {
     case invalidAccount
     case invalidAmount
 
@@ -27,4 +27,3 @@ public enum TransferValidationError: Error, LocalizedError, Equatable {
         }
     }
 }
-

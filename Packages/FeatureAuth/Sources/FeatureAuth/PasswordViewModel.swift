@@ -10,14 +10,14 @@ public final class PasswordViewModel: ObservableObject {
     public let presentation = ScreenPresentationStore()
     public let username: String
 
-    private let loginUseCase: LoginUseCaseProtocol
+    private let loginUseCase: any LoginUseCaseProtocol
     private let onAuthenticated: (AuthSession) -> Void
     private let lifecycleProbe = LifecycleProbe("PasswordViewModel")
     private var loginTask: Task<Void, Never>?
 
     public init(
         username: String,
-        loginUseCase: LoginUseCaseProtocol,
+        loginUseCase: any LoginUseCaseProtocol,
         onAuthenticated: @escaping (AuthSession) -> Void
     ) {
         self.username = username
@@ -58,6 +58,29 @@ public final class PasswordViewModel: ObservableObject {
         }
     }
 
+    public func didTapForgotPassword() {
+        presentation.present(
+            bottomSheet: BottomSheetModel(
+                iconSystemName: "key.fill",
+                title: "Bantuan password",
+                message: "Pilih flow reset atau aktivasi password sesuai contract aplikasi Anda.",
+                actions: [
+                    PresentationAction(id: "reset-password", title: "Reset Password"),
+                    PresentationAction(id: "dismiss", title: "Nanti", role: .secondary)
+                ]
+            )
+        )
+    }
+
+    public func didTapBiometric() {
+        presentation.show(
+            snackbar: SnackbarModel(
+                message: "Hubungkan action ini ke LocalAuthentication.",
+                iconSystemName: "faceid"
+            )
+        )
+    }
+
     private func finishLogin(with session: AuthSession) {
         isLoading = false
         onAuthenticated(session)
@@ -81,4 +104,3 @@ public final class PasswordViewModel: ObservableObject {
         loginTask?.cancel()
     }
 }
-

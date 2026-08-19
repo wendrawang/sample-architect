@@ -1,20 +1,29 @@
 import Foundation
 
-public struct AuthSession: Equatable {
+public struct AuthSession: Equatable, Sendable {
     public let accessToken: String
+    public let refreshToken: String?
+    public let expiration: Date?
     public let userDisplayName: String
 
-    public init(accessToken: String, userDisplayName: String) {
+    public init(
+        accessToken: String,
+        refreshToken: String? = nil,
+        expiration: Date? = nil,
+        userDisplayName: String
+    ) {
         self.accessToken = accessToken
+        self.refreshToken = refreshToken
+        self.expiration = expiration
         self.userDisplayName = userDisplayName
     }
 }
 
-public protocol AuthRepositoryProtocol {
+public protocol AuthRepositoryProtocol: Sendable {
     func login(username: String, password: String) async throws -> AuthSession
 }
 
-public enum AuthValidationError: Error, LocalizedError, Equatable {
+public enum AuthValidationError: Error, LocalizedError, Equatable, Sendable {
     case usernameTooShort
     case passwordTooShort
 
@@ -27,4 +36,3 @@ public enum AuthValidationError: Error, LocalizedError, Equatable {
         }
     }
 }
-

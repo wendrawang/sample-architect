@@ -1,14 +1,21 @@
 import Foundation
 
-public protocol SampleFeatureUseCaseProtocol {
-    func execute() async throws -> String
+public protocol SampleFeatureUseCaseProtocol: Sendable {
+    func execute() async throws -> SampleFeatureContent
 }
 
 public struct SampleFeatureUseCase: SampleFeatureUseCaseProtocol {
-    public init() {}
+    private let repository: any SampleFeatureRepositoryProtocol
 
-    public func execute() async throws -> String {
-        "Result from business logic"
+    public init(repository: any SampleFeatureRepositoryProtocol) {
+        self.repository = repository
+    }
+
+    public func execute() async throws -> SampleFeatureContent {
+        let content = try await repository.loadContent()
+        guard !content.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SampleFeatureError.emptyContent
+        }
+        return content
     }
 }
-

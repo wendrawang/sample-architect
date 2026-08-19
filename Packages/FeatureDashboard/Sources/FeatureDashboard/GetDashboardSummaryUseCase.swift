@@ -1,13 +1,13 @@
 import Foundation
 
-public protocol GetDashboardSummaryUseCaseProtocol {
+public protocol GetDashboardSummaryUseCaseProtocol: Sendable {
     func execute() async throws -> DashboardSummary
 }
 
 public final class GetDashboardSummaryUseCase: GetDashboardSummaryUseCaseProtocol {
-    private let repository: DashboardRepositoryProtocol
+    private let repository: any DashboardRepositoryProtocol
 
-    public init(repository: DashboardRepositoryProtocol) {
+    public init(repository: any DashboardRepositoryProtocol) {
         self.repository = repository
     }
 
@@ -15,4 +15,3 @@ public final class GetDashboardSummaryUseCase: GetDashboardSummaryUseCaseProtoco
         try await repository.getSummary()
     }
 }
-

@@ -13,8 +13,7 @@ public enum AppTabBarAppearance {
         if #available(iOS 15.0, *) {
             UITabBar.appearance().scrollEdgeAppearance = appearance
         }
-        UITabBar.appearance().tintColor = UIColor(red: 0.08, green: 0.31, blue: 0.78, alpha: 1)
+        UITabBar.appearance().tintColor = UIColor(red: 0.91, green: 0.03, blue: 0.08, alpha: 1)
         UITabBar.appearance().unselectedItemTintColor = .secondaryLabel
     }
 }
-

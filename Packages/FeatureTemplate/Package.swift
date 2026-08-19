@@ -17,11 +17,15 @@ let package = Package(
             dependencies: [
                 .product(name: "CoreKit", package: "Core"),
                 .product(name: "CoreNavigation", package: "Core"),
+                .product(name: "CoreNetwork", package: "Core"),
                 .product(name: "CorePresentation", package: "Core"),
                 .product(name: "DesignSystem", package: "DesignSystem")
             ]
+        ),
+        .testTarget(
+            name: "FeatureTemplateTests",
+            dependencies: ["FeatureTemplate"]
         )
     ],
     swiftLanguageModes: [.v5]
 )
-

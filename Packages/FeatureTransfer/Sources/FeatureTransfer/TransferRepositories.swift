@@ -1,17 +1,17 @@
 import CoreNetwork
 import Foundation
 
-private struct SubmitTransferRequestDTO: Encodable {
+private struct SubmitTransferRequestDTO: Encodable, Sendable {
     let destinationAccount: String
     let amount: Decimal
 }
 
-private struct TransferReceiptDTO: Decodable {
+private struct TransferReceiptDTO: Decodable, Sendable {
     let referenceNumber: String
     let amount: Decimal
 }
 
-public final class RemoteTransferRepository: TransferRepositoryProtocol {
+public final class RemoteTransferRepository: TransferRepositoryProtocol, @unchecked Sendable {
     private let apiClient: any APIClient
 
     public init(apiClient: any APIClient) {
@@ -30,14 +30,16 @@ public final class RemoteTransferRepository: TransferRepositoryProtocol {
                     destinationAccount: destinationAccount,
                     amount: amount
                 )
-            )
+            ),
+            authorization: .bearer,
+            signature: .required
         )
         let dto = try await apiClient.request(endpoint)
         return TransferReceipt(referenceNumber: dto.referenceNumber, amount: dto.amount)
     }
 }
 
-public final class MockTransferRepository: TransferRepositoryProtocol {
+public final class MockTransferRepository: TransferRepositoryProtocol, @unchecked Sendable {
     public init() {}
 
     public func submit(
@@ -52,4 +54,3 @@ public final class MockTransferRepository: TransferRepositoryProtocol {
         )
     }
 }
-

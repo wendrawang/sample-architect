@@ -1,6 +1,6 @@
 import Foundation
 
-private final class WeakReference {
+private final class WeakReference: @unchecked Sendable {
     weak var value: AnyObject?
 
     init(_ value: AnyObject) {
@@ -34,4 +34,3 @@ public enum LeakWatchdog {
         #endif
     }
 }
-

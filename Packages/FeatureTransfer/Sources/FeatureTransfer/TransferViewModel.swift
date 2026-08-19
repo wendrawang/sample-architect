@@ -10,14 +10,14 @@ public final class TransferViewModel: ObservableObject {
     @Published public private(set) var isLoading = false
     public let presentation = ScreenPresentationStore()
 
-    private let submitTransfer: SubmitTransferUseCaseProtocol
+    private let submitTransfer: any SubmitTransferUseCaseProtocol
     private let onFinished: () -> Void
     private let lifecycleProbe = LifecycleProbe("TransferViewModel")
     private var submitTask: Task<Void, Never>?
     private var completionTask: Task<Void, Never>?
 
     public init(
-        submitTransfer: SubmitTransferUseCaseProtocol,
+        submitTransfer: any SubmitTransferUseCaseProtocol,
         onFinished: @escaping () -> Void
     ) {
         self.submitTransfer = submitTransfer
@@ -34,6 +34,30 @@ public final class TransferViewModel: ObservableObject {
                 actions: [
                     PresentationAction(id: "confirm-transfer", title: "Ya, Transfer"),
                     PresentationAction(id: "cancel-transfer", title: "Periksa Lagi", role: .secondary)
+                ]
+            )
+        )
+    }
+
+    public func selectDestinationAccount(_ account: String) {
+        destinationAccount = account.replacingOccurrences(of: "•", with: "0")
+        presentation.show(
+            snackbar: SnackbarModel(
+                message: "Penerima dipilih. Masukkan nominal transfer.",
+                iconSystemName: "checkmark.circle.fill"
+            )
+        )
+    }
+
+    public func didTapNewRecipient() {
+        destinationAccount = ""
+        presentation.present(
+            bottomSheet: BottomSheetModel(
+                iconSystemName: "person.badge.plus",
+                title: "Penerima baru",
+                message: "Hubungkan action ini ke inquiry bank dan validasi rekening tujuan.",
+                actions: [
+                    PresentationAction(id: "dismiss", title: "Mengerti")
                 ]
             )
         )

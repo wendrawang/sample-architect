@@ -3,13 +3,13 @@ import UIKit
 
 @MainActor
 public final class TransferCoordinator: NavigationCoordinator {
-    private let repository: TransferRepositoryProtocol
+    private let repository: any TransferRepositoryProtocol
     private let onFlowFinished: () -> Void
     private var didFinishFlow = false
 
     public init(
         navigationController: UINavigationController,
-        repository: TransferRepositoryProtocol,
+        repository: any TransferRepositoryProtocol,
         onFlowFinished: @escaping () -> Void = {}
     ) {
         self.repository = repository
@@ -47,4 +47,3 @@ public final class TransferCoordinator: NavigationCoordinator {
         finish()
     }
 }
-

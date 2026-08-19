@@ -17,12 +17,27 @@ public struct SampleFeatureView: View {
                 Image(systemName: "shippingbox.fill")
                     .font(.system(size: 48))
                     .foregroundColor(SampleFeatureStyle.heroColor)
-                Text(viewModel.value)
-                    .font(AppTypography.heading)
+
+                if viewModel.isLoading {
+                    ProgressView()
+                        .tint(AppColor.brand)
+                } else if let content = viewModel.content {
+                    VStack(spacing: AppSpacing.xs) {
+                        Text(content.title)
+                            .font(AppTypography.heading)
+                        Text(content.message)
+                            .font(AppTypography.body)
+                            .foregroundColor(AppColor.secondaryText)
+                            .multilineTextAlignment(.center)
+                    }
+
+                    SecondaryButton("Lihat Custom Action", action: viewModel.didTapInfo)
+                        .frame(maxWidth: 280)
+                }
             }
+            .padding(AppSpacing.lg)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear(perform: viewModel.onAppear)
     }
 }
-
