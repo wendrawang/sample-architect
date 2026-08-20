@@ -87,10 +87,14 @@ Flow menyebut kebutuhannya lewat komposisi protokol — tipe parameternya **menj
 dokumentasi**:
 
 ```swift
-public struct MainFlowView: View {
-    private let dependencies: any DashboardDependencies & TransferDependencies
+public struct MainTabView<DashboardDestination: View>: View {
+    private let dependencies: any DashboardDependencies
 }
 ```
+
+Setelah gap 1 diterapkan, `MainTabView` bahkan tidak lagi menyebut `TransferDependencies`:
+layar Transfer dibangun composition root, jadi kebutuhannya pun tidak lagi menular ke
+shell tab bar.
 
 ### Yang didapat
 
@@ -151,9 +155,9 @@ public struct DeepLink: Hashable, Sendable {
 pusat, jadi tidak ada file yang harus diingat untuk diperbarui.
 
 ```swift
-// Packages/FeatureMain/Sources/FeatureMain/MainFlowView.swift
-extension MainRoute {
-    public static func path(for link: DeepLink) -> [MainRoute] {
+// Packages/FeatureDashboard/Sources/FeatureDashboard/DashboardFlowView.swift
+extension DashboardRoute {
+    public static func path(for link: DeepLink) -> [DashboardRoute] {
         switch link.segments.first {
         case "transfer": return [.transfer]
         default:         return []
@@ -200,16 +204,16 @@ func handleAuthenticated(_ session: AuthSession) {
 ```swift
 // AppRootView
 case .main:
-    MainFlowView(
+    MainTabView(
         dependencies: coordinator.dependencies,
-        initialPath: coordinator.rootState.deepLink.map(MainRoute.path(for:)) ?? [],
+        dashboardInitialPath: coordinator.rootState.deepLink.map(DashboardRoute.path(for:)) ?? [],
         onLogout: coordinator.handleLogout
-    )
+    ) { route in ... }
 ```
 
 ### Yang didapat
 
-- **Bisa diuji tanpa UI.** `XCTAssertEqual(MainRoute.path(for: link), [.transfer])`
+- **Bisa diuji tanpa UI.** `XCTAssertEqual(DashboardRoute.path(for: link), [.transfer])`
   adalah test biasa, tanpa simulator dan tanpa layar.
 - **Auth gating tidak mungkin terlupa**, karena hanya ada satu jalur masuk.
 - **Tidak ada registry pusat.** Tiap flow memetakan URL-nya sendiri, sehingga menambah
@@ -223,226 +227,112 @@ meneruskan `url` masuk ke `coordinator.handle(_:)`.
 
 ---
 
-## Gap 1 — `FeatureMain` yang tumbuh jadi god module
+## Gap 1 — `FeatureMain` yang tumbuh jadi god module — **sudah diterapkan**
 
 ### Masalahnya
 
-`FeatureMain` sekarang meng-`import` tujuh package. Perlu dibedakan dua jenis import,
-karena hanya satu yang berbahaya:
+Ada dua jenis import, dan hanya satu yang berbahaya:
 
 | Jenis | Contoh | Tumbuh? |
 |---|---|---|
-| Tab yang **dirender** | Dashboard, Financial, QRIS, Rewards, More | ❌ Tidak. Lima tab tetap lima tab. |
-| Layar yang **di-push** | Transfer | ✅ Ya. Bertambah tiap ada layar baru yang bisa dituju. |
+| Tab yang **dirender** | Dashboard, Financial, QRIS, Rewards, More | ❌ Lima tab tetap lima tab |
+| Layar yang **di-push** | Transfer, detail poin, dan seterusnya | ✅ Bertambah terus |
 
-Jadi masalahnya bukan "FeatureMain meng-import banyak", melainkan **FeatureMain harus
-meng-import setiap layar yang bisa di-push dari dalamnya**. Di layar ke-80, ia
-meng-import hampir seluruh aplikasi, ikut rebuild setiap kali salah satunya berubah,
-dan menjadi satu-satunya pintu bagi semua navigasi lintas fitur.
+Jadi masalahnya bukan jumlah import, melainkan bahwa `FeatureMain` harus mengenal setiap
+layar yang bisa dituju dari dalamnya.
 
-### Desain: destination dibangun di composition root
+### Yang dipakai: satu stack per tab
 
-`@ViewBuilder` bisa dipakai pada parameter closure. `switch` di dalamnya menghasilkan
-satu tipe konkret (`_ConditionalContent`), jadi **tidak perlu `AnyView`** dan aturan
-arsitektur tetap terjaga.
+`MainFlowView` dan `MainRoute` dihapus. Sekarang **tiap tab memiliki stack dan route-nya
+sendiri**, di dalam package tab itu sendiri:
 
 ```swift
-// FeatureMain — tidak lagi meng-import FeatureTransfer
-public struct MainFlowView<Destination: View>: View {
-    @StateObject private var router: NavigationRouter<MainRoute>
+// Packages/FeatureDashboard/Sources/FeatureDashboard/DashboardFlowView.swift
+public enum DashboardRoute: Hashable, Sendable {
+    case transfer
+}
 
-    private let dependencies: any DashboardDependencies
-    private let onLogout: () -> Void
-    private let destination: (MainRoute) -> Destination
-
-    public init(
-        dependencies: any DashboardDependencies,
-        initialPath: [MainRoute] = [],
-        onLogout: @escaping () -> Void,
-        @ViewBuilder destination: @escaping (MainRoute) -> Destination
-    ) {
-        _router = StateObject(wrappedValue: NavigationRouter(initialPath: initialPath))
-        self.dependencies = dependencies
-        self.onLogout = onLogout
-        self.destination = destination
-    }
+public struct DashboardFlowView<Destination: View>: View {
+    @StateObject private var router = NavigationRouter<DashboardRoute>()
+    @ObservedObject private var viewModel: DashboardViewModel
+    private let destination: (DashboardRoute) -> Destination
 
     public var body: some View {
         NavigationStack(path: $router.path) {
-            MainTabView(dependencies: dependencies, onIntent: handle)
+            DashboardView(viewModel: viewModel)
                 .toolbar(.hidden, for: .navigationBar)
-                .navigationDestination(for: MainRoute.self, destination: destination)
+                .navigationDestination(for: DashboardRoute.self, destination: destination)
+        }
+        .onReceive(viewModel.transferRequested) { _ in
+            guard router.current != .transfer else { return }
+            router.push(.transfer)
         }
     }
 }
 ```
 
-Composition root yang menyediakan isinya:
+Composition root yang membangun layar tujuannya:
 
 ```swift
-// App/AppRootView.swift — App memang sudah tahu semua feature, dan itu tugasnya
-MainFlowView(
+// App/AppRootView.swift
+MainTabView(
     dependencies: coordinator.dependencies,
     onLogout: coordinator.handleLogout
 ) { route in
     switch route {
     case .transfer:
-        TransferScreen(
-            repository: coordinator.dependencies.makeTransferRepository(),
-            onFinished: { }
-        )
-        .navigationTitle("Transfer")
+        TransferScreen(dependencies: coordinator.dependencies)
+            .navigationTitle("Transfer")
+            .toolbar(.hidden, for: .tabBar)
     }
 }
 ```
 
-### Intent menggantikan tumpukan closure
+Empat hal yang membuat ini bekerja:
 
-Bagian kedua dari gap yang sama. Sekarang setiap kemampuan baru menambah satu parameter
-closure:
+1. **`@ViewBuilder` pada parameter closure.** `switch` di sisi pemanggil menghasilkan satu
+   tipe konkret, jadi tidak perlu type erasure dan `switch`-nya tetap exhaustive — lupa
+   menangani case baru tetap gagal saat build.
+2. **`FeatureDashboard` tidak mengimpor `FeatureTransfer`.** Ia hanya mendeklarasikan
+   bahwa ada route bernama `.transfer`; yang membangun layarnya composition root.
+3. **ViewModel tidak mengenal navigasi.** `DashboardViewModel` mengirim
+   `transferRequested`, tanpa tahu itu route apa atau di stack mana. Flow view yang
+   menerjemahkan sinyal menjadi `push`.
+4. **Layar tujuan menutup dirinya sendiri.** `TransferScreen` memakai
+   `@Environment(\.dismiss)`, jadi ia bisa di-push dari stack mana pun tanpa perubahan —
+   tidak ada lagi closure `onFinished` yang mengikat layar pada pemanggilnya.
+
+Tab bar tetap hilang saat push lewat `.toolbar(.hidden, for: .tabBar)` pada layar tujuan,
+jadi kepemilikan route per tab tidak mengorbankan perilaku UI. Bonusnya, back stack tiap
+tab jadi independen.
+
+### Kalau tujuannya berada di tab lain
+
+Untuk kasus seperti bottom sheet dormant account yang bisa mengarah ke layar milik tab
+lain, angkat kepemilikan router satu tingkat ke `MainTabView`, lalu perpindahan tab dan
+penyemaian path dilakukan bersamaan:
 
 ```swift
-MainTabView(dependencies:, onTransfer:, onLogout:)
-// nanti: onTransfer, onLogout, onQRIS, onProfile, onHistory, onSettings, ...
-```
-
-Ganti dengan satu `enum`, sehingga menambah kemampuan tidak mengubah signature:
-
-```swift
-public enum MainIntent: Sendable {
-    case openTransfer
-    case logout
-}
-
-MainTabView(dependencies: dependencies, onIntent: handle)
-```
-
-```swift
-private func handle(_ intent: MainIntent) {
-    switch intent {
-    case .openTransfer:
-        guard router.current != .transfer else { return }
-        router.push(.transfer)
-    case .logout:
-        onLogout()
-    }
+case .openDashboardRoute(let route):
+    viewModel.selection = .dashboard
+    dashboardRouter.path = [route]
 }
 ```
 
-**Aturan yang dijaga:** intent selalu **naik**, tidak pernah **menyamping**. Feature
-tidak pernah meng-import feature lain; ia hanya menyatakan maksud, dan yang menyusunnya
-di atas sana yang memutuskan artinya. Kalau tujuannya ada di flow lain, intent itu naik
-terus sampai `AppCoordinator`, yang bisa mengubah root state sekaligus menyemai path.
-
-### Yang didapat
-
-- **Import `FeatureMain` berhenti tumbuh.** Ia hanya mengenal lima tab yang dirender,
-  selamanya. Layar yang bisa di-push tidak lagi menjadi urusannya.
-- **Rebuild lebih sempit.** Mengubah `FeatureTransfer` tidak lagi memaksa `FeatureMain`
-  ikut dikompilasi ulang.
-- **`switch` tetap exhaustive**, jadi menambah case route tanpa menanganinya tetap gagal
-  saat build.
-- **Menambah kemampuan tidak mengubah signature**, jadi tidak ada lagi init berisi
-  sepuluh closure.
-
-### Varian yang lebih tepat kalau tiap tab punya banyak tujuan
-
-Desain di atas mengasumsikan layar yang di-push berangkat dari **root** flow Main. Kalau
-kenyataannya setiap tab punya tujuannya sendiri — Dashboard ke detail poin, Financial ke
-banyak layar, dan seterusnya — satu `MainRoute` untuk semua tab akan tetap membengkak,
-walaupun destination-nya sudah dipindah ke composition root.
-
-Bentuk yang benar untuk kasus itu: **satu `NavigationStack` per tab**, dan setiap tab
-memiliki route enum-nya sendiri di dalam package-nya sendiri.
-
-```swift
-// Packages/FeatureDashboard — Dashboard yang memiliki route-nya, bukan FeatureMain
-public enum DashboardRoute: Hashable, Sendable {
-    case pointDetail(id: String)
-    case transactionHistory
-}
-
-public struct DashboardFlowView: View {
-    @StateObject private var router = NavigationRouter<DashboardRoute>()
-
-    public var body: some View {
-        NavigationStack(path: $router.path) {
-            DashboardScreen(dependencies: dependencies, onIntent: handle)
-                .navigationDestination(for: DashboardRoute.self) { route in
-                    destination(for: route)
-                }
-        }
-    }
-}
-```
-
-`MainTabView` cukup menyusun lima `FlowView`, dan **tidak pernah tahu** ada layar detail
-poin. Menambah tujuan baru di Dashboard tidak menyentuh `FeatureMain` sama sekali.
-
-Tab bar tetap bisa disembunyikan saat push — sejak iOS 16 itu diatur dari layar tujuan,
-bukan dari struktur container:
-
-```swift
-PointDetailScreen(...)
-    .toolbar(.hidden, for: .tabBar)
-```
-
-Jadi Anda tidak perlu memilih antara "route dimiliki tab" dan "tab bar hilang saat push".
-Keduanya bisa sekaligus.
-
-Keuntungan tambahan: back stack tiap tab jadi independen, sehingga berpindah tab tidak
-menghapus posisi tab sebelumnya.
-
-### Tujuan yang berada di tab lain
-
-Untuk kasus seperti bottom sheet dormant account yang bisa mengarah ke mana saja,
-termasuk ke layar milik tab lain: intent **naik** sampai ke `MainFlowView`, dan di sanalah
-perpindahan tab sekaligus penyemaian path dilakukan.
-
-```swift
-public enum MainIntent: Sendable {
-    case openTab(MainTab)
-    case openDashboardRoute(DashboardRoute)
-    case logout
-}
-
-private func handle(_ intent: MainIntent) {
-    switch intent {
-    case .openTab(let tab):
-        selection = tab
-
-    case .openDashboardRoute(let route):
-        selection = .dashboard
-        dashboardRouter.path = [route]      // pindah tab sekaligus semai path-nya
-
-    case .logout:
-        onLogout()
-    }
-}
-```
-
-Yang dijaga tetap sama: Financial tidak pernah meng-`import` Dashboard. Ia hanya
-menyatakan maksud, dan `MainFlowView` — yang memang sudah menyusun kelima tab — yang
-menerjemahkannya. Ini juga membuat perpindahan lintas tab punya satu titik yang bisa
-dicatat untuk analytics.
-
-### Ongkosnya
-
-`MainFlowView` menjadi generik atas `Destination`. Ini menular ke pemanggilnya, tapi
-hanya satu tempat — composition root. Dan `enum MainIntent` adalah satu tipe tambahan
-per flow.
-
----
+Yang dijaga tetap sama: Financial tidak pernah mengimpor Dashboard. Ia hanya menyatakan
+maksud, dan `MainTabView` — yang memang sudah menyusun kelima tab — yang menerjemahkan.
+Karena semua perpindahan lintas tab lewat satu titik, di sinilah analytics screen-view
+bisa dicatat sekali dan valid.
 
 ## Kapan menerapkan yang mana
 
-| Gap | Terapkan saat | Kenapa jangan sekarang-sekarang amat |
+| Gap | Status | Catatan |
 |---|---|---|
-| 3 — dependency | **Sekarang.** Murah, dan langsung memperbaiki eager-loading saat masuk Main. | Tidak ada alasan menunda. |
-| 2 — deep link | Saat kebutuhan deep link atau push notification pertama muncul. | Menebak bentuk URL sebelum ada requirement biasanya salah. |
-| 1 — god module | Saat layar yang bisa di-push dari Main melewati tiga atau empat. | Pada satu layar push, generik `Destination` menambah rumit tanpa imbalan. |
+| 3 — dependency | ✅ Diterapkan | Feature mendeklarasikan kebutuhannya; `AppDependencies` memenuhinya. |
+| 1 — god module | ✅ Diterapkan | Satu stack per tab; layar tujuan dibangun composition root. |
+| 2 — deep link | ⏳ Belum | Terapkan saat requirement deep link atau push notification pertama muncul. Menebak bentuk URL sebelum ada requirement biasanya salah. |
 
-Ketiganya berdiri sendiri. Menerapkan gap 3 tidak memaksa Anda menerapkan gap 1.
+Gap 2 berdiri sendiri dan tidak bergantung pada dua lainnya.
 
 ---
 

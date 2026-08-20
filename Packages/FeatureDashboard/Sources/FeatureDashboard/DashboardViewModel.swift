@@ -9,18 +9,17 @@ public final class DashboardViewModel: ObservableObject {
     @Published public private(set) var isLoading = false
     public let presentation = ScreenPresentationStore()
 
+    /// ViewModel menyatakan "pengguna ingin transfer" tanpa tahu itu route apa, di stack
+    /// mana, atau layar apa yang akan dibangun. Flow view yang menerjemahkannya.
+    public let transferRequested = PassthroughSubject<Void, Never>()
+
     private let getSummary: any GetDashboardSummaryUseCaseProtocol
-    private let onTransfer: () -> Void
     private let lifecycleProbe = LifecycleProbe("DashboardViewModel")
     private var loadTask: Task<Void, Never>?
     private var hasLoaded = false
 
-    public init(
-        getSummary: any GetDashboardSummaryUseCaseProtocol,
-        onTransfer: @escaping () -> Void
-    ) {
+    public init(getSummary: any GetDashboardSummaryUseCaseProtocol) {
         self.getSummary = getSummary
-        self.onTransfer = onTransfer
     }
 
     public func onAppear() {
@@ -43,7 +42,7 @@ public final class DashboardViewModel: ObservableObject {
     }
 
     public func didTapTransfer() {
-        onTransfer()
+        transferRequested.send()
     }
 
     public func didTapBalanceInfo() {

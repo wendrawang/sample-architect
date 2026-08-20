@@ -1,8 +1,10 @@
 import CoreGuards
 import DesignSystem
 import FeatureAuth
+import FeatureDashboard
 import FeatureMain
 import FeatureSplash
+import FeatureTransfer
 import SwiftUI
 
 /// The single root view. It swaps whole flows, paints the global blocker above them, and
@@ -54,10 +56,18 @@ struct AppRootView: View {
             )
 
         case .main:
-            MainFlowView(
+            MainTabView(
                 dependencies: coordinator.dependencies,
                 onLogout: coordinator.handleLogout
-            )
+            ) { route in
+                switch route {
+                case .transfer:
+                    TransferScreen(dependencies: coordinator.dependencies)
+                        .navigationTitle("Transfer")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar(.hidden, for: .tabBar)
+                }
+            }
         }
     }
 }

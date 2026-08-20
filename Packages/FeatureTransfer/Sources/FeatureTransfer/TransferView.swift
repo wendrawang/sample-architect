@@ -1,3 +1,4 @@
+import Combine
 import DesignSystem
 import SwiftUI
 
@@ -214,23 +215,24 @@ public struct TransferView: View {
 /// Ownership boundary for the transfer screen. Popping the route releases this view, which
 /// releases the ViewModel, whose `deinit` cancels the in-flight submit and completion tasks.
 public struct TransferScreen: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel: TransferViewModel
 
-    public init(
-        dependencies: any TransferDependencies,
-        onFinished: @escaping () -> Void
-    ) {
+    public init(dependencies: any TransferDependencies) {
         _viewModel = StateObject(
             wrappedValue: TransferViewModel(
                 submitTransfer: SubmitTransferUseCase(
                     repository: dependencies.makeTransferRepository()
-                ),
-                onFinished: onFinished
+                )
             )
         )
     }
 
     public var body: some View {
         TransferView(viewModel: viewModel)
+            .onReceive(viewModel.$didFinish) { didFinish in
+                guard didFinish else { return }
+                dismiss()
+            }
     }
 }

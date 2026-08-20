@@ -10,7 +10,13 @@ check_forbidden() {
   local message="$2"
   shift 2
 
-  if rg --line-number "$pattern" "$@"; then
+  # Aturan ini menjaga kode, bukan prosa. Baris yang isinya diawali `//` adalah komentar
+  # dan boleh menyebut nama API terlarang untuk menjelaskan kenapa API itu dihindari.
+  local matches
+  matches="$(rg --line-number "$pattern" "$@" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' || true)"
+
+  if [[ -n "$matches" ]]; then
+    echo "$matches"
     echo "ERROR: $message"
     failed=1
   fi

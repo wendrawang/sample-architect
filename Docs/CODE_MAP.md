@@ -157,10 +157,11 @@ Ini pertanyaan yang paling sering muncul, jadi ditulis terpisah.
 public struct TransferScreen: View {
     @StateObject private var viewModel: TransferViewModel
 
-    public init(repository: any TransferRepositoryProtocol, onFinished: @escaping () -> Void) {
+    public init(dependencies: any TransferDependencies) {
         _viewModel = StateObject(wrappedValue: TransferViewModel(
-            submitTransfer: SubmitTransferUseCase(repository: repository),
-            onFinished: onFinished
+            submitTransfer: SubmitTransferUseCase(
+                repository: dependencies.makeTransferRepository()
+            )
         ))
     }
 

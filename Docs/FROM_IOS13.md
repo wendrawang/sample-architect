@@ -88,13 +88,13 @@ blank atau pop sendiri.
 Sekarang path adalah array biasa:
 
 ```swift
-enum MainRoute: Hashable, Sendable {
+enum DashboardRoute: Hashable, Sendable {
     case transfer
 }
 
 NavigationStack(path: $router.path) {
     MainTabView(...)
-        .navigationDestination(for: MainRoute.self) { route in
+        .navigationDestination(for: DashboardRoute.self) { route in
             switch route {
             case .transfer: TransferScreen(...)
             }
@@ -309,7 +309,7 @@ mendaftar berarti layar itu tidak bisa dituju — masalah itu hilang di sini, ka
 `switch` di `navigationDestination` bersifat **exhaustive**:
 
 ```swift
-enum MainRoute: Hashable, Sendable {
+enum DashboardRoute: Hashable, Sendable {
     case transfer
     case history          // ← tambah case baru
 }

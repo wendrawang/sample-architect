@@ -8,20 +8,18 @@ public final class TransferViewModel: ObservableObject {
     @Published public var destinationAccount = ""
     @Published public var amount = ""
     @Published public private(set) var isLoading = false
+    /// Layar cukup melapor bahwa ia selesai. Siapa yang menutupnya bukan urusannya, jadi
+    /// TransferScreen bisa di-push dari stack mana pun tanpa perubahan.
+    @Published public private(set) var didFinish = false
     public let presentation = ScreenPresentationStore()
 
     private let submitTransfer: any SubmitTransferUseCaseProtocol
-    private let onFinished: () -> Void
     private let lifecycleProbe = LifecycleProbe("TransferViewModel")
     private var submitTask: Task<Void, Never>?
     private var completionTask: Task<Void, Never>?
 
-    public init(
-        submitTransfer: any SubmitTransferUseCaseProtocol,
-        onFinished: @escaping () -> Void
-    ) {
+    public init(submitTransfer: any SubmitTransferUseCaseProtocol) {
         self.submitTransfer = submitTransfer
-        self.onFinished = onFinished
     }
 
     public func didTapReview() {
@@ -114,7 +112,7 @@ public final class TransferViewModel: ObservableObject {
         completionTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 900_000_000)
             guard !Task.isCancelled else { return }
-            self?.onFinished()
+            self?.didFinish = true
         }
     }
 

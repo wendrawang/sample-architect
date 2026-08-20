@@ -45,7 +45,7 @@ public struct SampleFeatureView: View {
 /// Ownership boundary for the sample screen — copy this pair when starting a new feature.
 ///
 /// The flow that owns this screen declares its own route enum and pushes it through a
-/// `NavigationRouter`; see `MainFlowView` in `FeatureMain` for a wired example.
+/// `NavigationRouter`; see `DashboardFlowView` in `FeatureDashboard` for a wired example.
 public struct SampleFeatureScreen: View {
     @StateObject private var viewModel: SampleFeatureViewModel
 

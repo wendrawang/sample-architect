@@ -1,3 +1,4 @@
+import CoreNavigation
 import CorePresentation
 import DesignSystem
 import FeatureDashboard
@@ -7,7 +8,9 @@ import FeatureQRIS
 import FeatureRewards
 import SwiftUI
 
-public struct MainTabView: View {
+/// Shell tab bar. Ia menyusun lima tab dan tidak tahu apa-apa soal layar yang bisa
+/// di-push dari dalamnya — tiap tab memiliki stack dan route-nya sendiri.
+public struct MainTabView<DashboardDestination: View>: View {
     @StateObject private var viewModel: MainTabViewModel
     @StateObject private var dashboardViewModel: DashboardViewModel
     @StateObject private var financialViewModel: FinancialViewModel
@@ -15,18 +18,20 @@ public struct MainTabView: View {
     @StateObject private var rewardsViewModel: RewardsViewModel
     @StateObject private var moreViewModel: MoreViewModel
 
+    private let dashboardDestination: (DashboardRoute) -> DashboardDestination
+
     public init(
         dependencies: any DashboardDependencies,
-        onTransfer: @escaping () -> Void,
-        onLogout: @escaping () -> Void
+        onLogout: @escaping () -> Void,
+        @ViewBuilder dashboardDestination: @escaping (DashboardRoute) -> DashboardDestination
     ) {
+        self.dashboardDestination = dashboardDestination
         _viewModel = StateObject(wrappedValue: MainTabViewModel())
         _dashboardViewModel = StateObject(
             wrappedValue: DashboardViewModel(
                 getSummary: GetDashboardSummaryUseCase(
                     repository: dependencies.makeDashboardRepository()
-                ),
-                onTransfer: onTransfer
+                )
             )
         )
         _financialViewModel = StateObject(wrappedValue: FinancialViewModel())
@@ -38,7 +43,10 @@ public struct MainTabView: View {
     public var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $viewModel.selection) {
-                DashboardView(viewModel: dashboardViewModel)
+                DashboardFlowView(
+                    viewModel: dashboardViewModel,
+                    destination: dashboardDestination
+                )
                     .tag(MainTab.dashboard)
                     .tabItem {
                         Label("Beranda", systemImage: "house.fill")

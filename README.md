@@ -57,10 +57,10 @@ SceneDelegate
           ├─ AuthFlowView
           │   └─ NavigationStack<AuthRoute>
           │       └─ Username -> .password
-          ├─ MainFlowView
-          │   └─ NavigationStack<MainRoute>
+          ├─ MainTabView
           │       └─ TabView
-          │           ├─ Beranda / Dashboard -> .transfer
+          │           ├─ Beranda / DashboardFlowView
+          │           │     └─ NavigationStack<DashboardRoute> -> .transfer
           │           ├─ Finansial
           │           ├─ QRIS Scan (tombol bulat besar di tengah)
           │           ├─ Rewards
@@ -118,8 +118,8 @@ ViewModel output -> Router.push/pop -> NavigationStack path
 | `DesignSystem` | Color/spacing/radius/typography, reusable controls, logo placeholder, tab/nav style, `ScreenScaffold` | Semua SwiftUI screen |
 | `FeatureSplash` | Splash UI, startup inquiry, launch decision, retry/maintenance/force-update | Cold launch sebelum masuk pre-login/main |
 | `FeatureAuth` | Username, password, validation/login UseCase, `AuthFlowView` + `AuthRoute` | Pre-login dan autentikasi |
-| `FeatureMain` | Composition boundary lima tab, `MainFlowView` + `MainRoute` | Setelah autentikasi berhasil |
-| `FeatureDashboard` | Dashboard inquiry, hero/menu/balance/transaction UI | Tab Beranda |
+| `FeatureMain` | Shell tab bar. Menyusun lima tab, tidak mengenal layar yang di-push dari dalamnya | Setelah autentikasi berhasil |
+| `FeatureDashboard` | Dashboard inquiry, UI, `DashboardFlowView` + `DashboardRoute` | Tab Beranda dan tujuan dari dalamnya |
 | `FeatureTransfer` | Daftar penerima, nominal, confirmation, submit UseCase, `TransferScreen` | Route `.transfer` dari Dashboard |
 | `FeatureFinancial` | Portfolio/product placeholder | Tab Finansial |
 | `FeatureQRIS` | QR scanner shell dan camera/gallery adapter point | Tombol QRIS di tengah tab bar |
@@ -135,22 +135,30 @@ Satu flow memiliki satu `NavigationRouter<Route>`. Router hanya menyimpan array 
 bertipe — tidak pernah menyimpan View, ViewModel, atau controller:
 
 ```swift
-public enum MainRoute: Hashable {
+public enum DashboardRoute: Hashable, Sendable {
     case transfer
 }
 
 NavigationStack(path: $router.path) {
-    MainTabView(
-        dependencies: dependencies,
-        onTransfer: { [weak router] in
-            guard let router, router.current != .transfer else { return }
-            router.push(.transfer)
-        },
-        onLogout: onLogout
-    )
-    .toolbar(.hidden, for: .navigationBar)
-    .navigationDestination(for: MainRoute.self) { route in
-        destination(for: route)
+    DashboardView(viewModel: viewModel)
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(for: DashboardRoute.self, destination: destination)
+}
+.onReceive(viewModel.transferRequested) { _ in
+    guard router.current != .transfer else { return }
+    router.push(.transfer)
+}
+```
+
+Layar tujuannya dibangun composition root, sehingga `FeatureDashboard` tidak perlu
+mengimpor `FeatureTransfer`:
+
+```swift
+MainTabView(dependencies: ..., onLogout: ...) { route in
+    switch route {
+    case .transfer:
+        TransferScreen(dependencies: ...)
+            .toolbar(.hidden, for: .tabBar)
     }
 }
 ```
@@ -605,7 +613,7 @@ Menu Transfer pada Dashboard tidak memakai `NavigationLink(destination:)`:
 
 ```text
 Dashboard button
-  -> DashboardViewModel.onTransfer
+  -> DashboardViewModel.transferRequested
   -> router.push(.transfer)
   -> NavigationStack membangun TransferScreen
   -> Transfer selesai/Back/swipe
