@@ -3,7 +3,6 @@ import CoreGuards
 import CoreKit
 import CoreNetwork
 import FeatureAuth
-import FeatureMain
 import FeatureSplash
 import Foundation
 import UIKit
@@ -20,9 +19,9 @@ final class AppCoordinator: ObservableObject {
 
     let fpsMonitor: FrameRateMonitor?
 
-    let splashRepository: any SplashRepositoryProtocol
-    let authRepository: any AuthRepositoryProtocol
-    let mainDependencies: MainDependencies
+    /// Satu object yang memenuhi protokol kebutuhan setiap feature. Diserahkan apa adanya
+    /// ke flow; masing-masing flow hanya melihat bagian yang ia butuhkan.
+    let dependencies: AppDependencies
 
     private let configuration: AppConfiguration
     private let rootGuard: RootGuardMonitor
@@ -53,19 +52,9 @@ final class AppCoordinator: ObservableObject {
         )
         self.apiClient = apiClient
         fpsMonitor = configuration.showFPS ? FrameRateMonitor() : nil
-
-        splashRepository = Self.makeSplashRepository(
-            configuration: configuration,
-            apiClient: apiClient
-        )
-        if configuration.useMockServices {
-            authRepository = MockAuthRepository()
-        } else {
-            authRepository = RemoteAuthRepository(apiClient: apiClient)
-        }
-        mainDependencies = MainDependencies.make(
+        dependencies = AppDependencies(
             apiClient: apiClient,
-            useMocks: configuration.useMockServices
+            configuration: configuration
         )
 
         apiClient.updateCredential(initialCredential)
@@ -167,32 +156,5 @@ final class AppCoordinator: ObservableObject {
             "Root transition: \(self.rootState.content.rawValue, privacy: .public) -> \(content.rawValue, privacy: .public)"
         )
         rootState.content = content
-    }
-
-    private static func makeSplashRepository(
-        configuration: AppConfiguration,
-        apiClient: any APIClient
-    ) -> any SplashRepositoryProtocol {
-        guard configuration.useMockServices else {
-            return RemoteSplashRepository(
-                apiClient: apiClient,
-                path: configuration.splashInquiryPath
-            )
-        }
-
-        let arguments = ProcessInfo.processInfo.arguments
-        let destination: LaunchDestination
-        if arguments.contains("-simulateMaintenance") {
-            destination = .maintenance
-        } else if arguments.contains("-simulateForceUpdate") {
-            destination = .forceUpdate
-        } else {
-            destination = .preLogin
-        }
-
-        return MockSplashRepository(
-            decision: LaunchDecision(destination: destination),
-            shouldFail: arguments.contains("-simulateSplashFailure")
-        )
     }
 }

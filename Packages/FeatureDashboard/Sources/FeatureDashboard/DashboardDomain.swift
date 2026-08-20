@@ -36,3 +36,12 @@ public struct DashboardSummary: Equatable, Sendable {
 public protocol DashboardRepositoryProtocol: Sendable {
     func getSummary() async throws -> DashboardSummary
 }
+
+
+/// Apa yang feature ini butuhkan dari luar. Composition root yang memenuhinya.
+///
+/// Bentuk factory, bukan property, supaya repository baru dibangun ketika layar dibuka —
+/// bukan sekaligus di awal untuk layar yang mungkin tidak pernah dibuka.
+public protocol DashboardDependencies: Sendable {
+    func makeDashboardRepository() -> any DashboardRepositoryProtocol
+}

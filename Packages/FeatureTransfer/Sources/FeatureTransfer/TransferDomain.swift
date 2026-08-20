@@ -27,3 +27,12 @@ public enum TransferValidationError: Error, LocalizedError, Equatable, Sendable 
         }
     }
 }
+
+
+/// Apa yang feature ini butuhkan dari luar. Composition root yang memenuhinya.
+///
+/// Bentuk factory, bukan property, supaya repository baru dibangun ketika layar dibuka —
+/// bukan sekaligus di awal untuk layar yang mungkin tidak pernah dibuka.
+public protocol TransferDependencies: Sendable {
+    func makeTransferRepository() -> any TransferRepositoryProtocol
+}

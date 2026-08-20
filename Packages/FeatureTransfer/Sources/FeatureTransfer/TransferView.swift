@@ -217,12 +217,14 @@ public struct TransferScreen: View {
     @StateObject private var viewModel: TransferViewModel
 
     public init(
-        repository: any TransferRepositoryProtocol,
+        dependencies: any TransferDependencies,
         onFinished: @escaping () -> Void
     ) {
         _viewModel = StateObject(
             wrappedValue: TransferViewModel(
-                submitTransfer: SubmitTransferUseCase(repository: repository),
+                submitTransfer: SubmitTransferUseCase(
+                    repository: dependencies.makeTransferRepository()
+                ),
                 onFinished: onFinished
             )
         )

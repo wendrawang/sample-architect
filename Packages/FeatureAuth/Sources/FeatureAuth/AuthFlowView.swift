@@ -10,14 +10,14 @@ public enum AuthRoute: Hashable, Sendable {
 public struct AuthFlowView: View {
     @StateObject private var router = NavigationRouter<AuthRoute>()
 
-    private let repository: any AuthRepositoryProtocol
+    private let dependencies: any AuthDependencies
     private let onAuthenticated: (AuthSession) -> Void
 
     public init(
-        repository: any AuthRepositoryProtocol,
+        dependencies: any AuthDependencies,
         onAuthenticated: @escaping (AuthSession) -> Void
     ) {
-        self.repository = repository
+        self.dependencies = dependencies
         self.onAuthenticated = onAuthenticated
     }
 
@@ -39,7 +39,7 @@ public struct AuthFlowView: View {
         case .password(let username):
             PasswordScreen(
                 username: username,
-                repository: repository,
+                dependencies: dependencies,
                 onAuthenticated: onAuthenticated
             )
             .navigationTitle("Masukkan Password")

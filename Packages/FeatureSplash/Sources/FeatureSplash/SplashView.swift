@@ -56,13 +56,15 @@ public struct SplashScreen: View {
     @StateObject private var viewModel: SplashViewModel
 
     public init(
-        repository: any SplashRepositoryProtocol,
+        dependencies: any SplashDependencies,
         onRoute: @escaping (LaunchDestination) -> Void,
         onUpdateRequested: @escaping () -> Void
     ) {
         _viewModel = StateObject(
             wrappedValue: SplashViewModel(
-                useCase: PrepareLaunchUseCase(repository: repository),
+                useCase: PrepareLaunchUseCase(
+                    repository: dependencies.makeSplashRepository()
+                ),
                 onRoute: onRoute,
                 onUpdateRequested: onUpdateRequested
             )

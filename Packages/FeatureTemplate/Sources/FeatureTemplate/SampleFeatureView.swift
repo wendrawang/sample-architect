@@ -49,10 +49,12 @@ public struct SampleFeatureView: View {
 public struct SampleFeatureScreen: View {
     @StateObject private var viewModel: SampleFeatureViewModel
 
-    public init(repository: any SampleFeatureRepositoryProtocol) {
+    public init(dependencies: any SampleFeatureDependencies) {
         _viewModel = StateObject(
             wrappedValue: SampleFeatureViewModel(
-                useCase: SampleFeatureUseCase(repository: repository)
+                useCase: SampleFeatureUseCase(
+                    repository: dependencies.makeSampleFeatureRepository()
+                )
             )
         )
     }

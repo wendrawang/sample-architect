@@ -16,7 +16,7 @@ public struct MainTabView: View {
     @StateObject private var moreViewModel: MoreViewModel
 
     public init(
-        dependencies: MainDependencies,
+        dependencies: any DashboardDependencies,
         onTransfer: @escaping () -> Void,
         onLogout: @escaping () -> Void
     ) {
@@ -24,7 +24,7 @@ public struct MainTabView: View {
         _dashboardViewModel = StateObject(
             wrappedValue: DashboardViewModel(
                 getSummary: GetDashboardSummaryUseCase(
-                    repository: dependencies.dashboardRepository
+                    repository: dependencies.makeDashboardRepository()
                 ),
                 onTransfer: onTransfer
             )

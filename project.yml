@@ -21,6 +21,10 @@ packages:
     path: Packages/FeatureAuth
   FeatureMain:
     path: Packages/FeatureMain
+  FeatureDashboard:
+    path: Packages/FeatureDashboard
+  FeatureTransfer:
+    path: Packages/FeatureTransfer
 
 targets:
   ModularBank:
@@ -50,6 +54,10 @@ targets:
         product: FeatureAuth
       - package: FeatureMain
         product: FeatureMain
+      - package: FeatureDashboard
+        product: FeatureDashboard
+      - package: FeatureTransfer
+        product: FeatureTransfer
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.modularbank

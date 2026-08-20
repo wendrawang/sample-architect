@@ -1,4 +1,5 @@
 import CoreNavigation
+import FeatureDashboard
 import FeatureTransfer
 import SwiftUI
 
@@ -9,11 +10,13 @@ public enum MainRoute: Hashable, Sendable {
 public struct MainFlowView: View {
     @StateObject private var router = NavigationRouter<MainRoute>()
 
-    private let dependencies: MainDependencies
+    /// Tipe parameter ini sekaligus menjadi dokumentasi: flow Main butuh Dashboard untuk
+    /// tab-nya dan Transfer untuk layar yang bisa di-push dari sana.
+    private let dependencies: any DashboardDependencies & TransferDependencies
     private let onLogout: () -> Void
 
     public init(
-        dependencies: MainDependencies,
+        dependencies: any DashboardDependencies & TransferDependencies,
         onLogout: @escaping () -> Void
     ) {
         self.dependencies = dependencies
@@ -44,7 +47,7 @@ public struct MainFlowView: View {
         switch route {
         case .transfer:
             TransferScreen(
-                repository: dependencies.transferRepository,
+                dependencies: dependencies,
                 onFinished: { [weak router] in router?.pop() }
             )
             .navigationTitle("Transfer")

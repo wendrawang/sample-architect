@@ -72,13 +72,15 @@ public struct PasswordScreen: View {
 
     public init(
         username: String,
-        repository: any AuthRepositoryProtocol,
+        dependencies: any AuthDependencies,
         onAuthenticated: @escaping (AuthSession) -> Void
     ) {
         _viewModel = StateObject(
             wrappedValue: PasswordViewModel(
                 username: username,
-                loginUseCase: LoginUseCase(repository: repository),
+                loginUseCase: LoginUseCase(
+                    repository: dependencies.makeAuthRepository()
+                ),
                 onAuthenticated: onAuthenticated
             )
         )

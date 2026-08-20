@@ -42,20 +42,20 @@ struct AppRootView: View {
 
         case .splash:
             SplashScreen(
-                repository: coordinator.splashRepository,
+                dependencies: coordinator.dependencies,
                 onRoute: coordinator.handleLaunchDestination,
                 onUpdateRequested: coordinator.openAppStore
             )
 
         case .preLogin:
             AuthFlowView(
-                repository: coordinator.authRepository,
+                dependencies: coordinator.dependencies,
                 onAuthenticated: coordinator.handleAuthenticated
             )
 
         case .main:
             MainFlowView(
-                dependencies: coordinator.mainDependencies,
+                dependencies: coordinator.dependencies,
                 onLogout: coordinator.handleLogout
             )
         }
