@@ -775,7 +775,7 @@ Sesuaikan nama simulator dengan runtime yang terpasang.
 - `Docs/PERFORMANCE_AND_LEAKS.md` — prosedur Instruments.
 - `Docs/SWIFT_CONCURRENCY.md` — `async`/`await`, `Task`, `@MainActor`, dan `Sendable` untuk pembaca yang terbiasa GCD.
 - `Docs/CODE_MAP.md` — kegunaan setiap file, dan apa yang rusak kalau file itu dihapus.
-- `Docs/FROM_IOS13.md` — perbandingan dengan cara lama: UIKit, delegate, singleton, `UINavigationController`, dan beda `@ObservedObject` vs `@StateObject`.
+- `Docs/FROM_IOS13.md` — untuk yang sudah menulis SwiftUI sejak iOS 13: beda `@StateObject` vs `@ObservedObject`, `NavigationStack`, `Task`, `@MainActor`, `Sendable`, dan lima keluhan lama (layar blank, `onAppear` dobel, object tidak deinit, whitelist routing, cold launch).
 
 Referensi upstream:
 

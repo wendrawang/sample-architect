@@ -1,320 +1,355 @@
-# Dari iOS 13 / Swift 5 ke Template Ini
+# Dari SwiftUI iOS 13 ke SwiftUI iOS 16 + Swift 6
 
-Dokumen ini untuk pembaca yang sudah lama menulis iOS dengan UIKit, Storyboard,
-delegate, dan `DispatchQueue`, lalu menemukan template ini penuh istilah asing.
+Untuk pembaca yang sudah menulis SwiftUI sejak iOS 13 dengan `@State`, `@Binding`,
+`@ObservedObject`, dan `@EnvironmentObject` — lalu menemukan template ini penuh istilah
+yang belum pernah dipakai: `@StateObject`, `Task`, `@MainActor`, `Sendable`.
 
-Formatnya selalu sama: **dulu Anda menulis apa**, **sekarang jadi apa**, dan
-**kenapa berubah**. Kalau alasannya tidak meyakinkan Anda, katakan — tidak semua
-perubahan wajib diikuti.
+Anda tidak ketinggalan sejauh yang Anda kira. Yang berubah sejak iOS 13 sebenarnya cuma
+tiga hal:
 
-Dua dokumen pendamping:
+1. **Kepemilikan object** jadi eksplisit (`@StateObject`).
+2. **Navigasi** jadi data, bukan perintah (`NavigationStack`).
+3. **Aturan thread** pindah dari kepala Anda ke compiler (`@MainActor`, `Sendable`).
 
-- `Docs/SWIFT_CONCURRENCY.md` — `async`/`await`, `Task`, `@MainActor`, `Sendable`.
-- `README.md` bagian 8 — tabel pengganti `BaseService`, `ObjectMapper`, `responseJSON`.
+Sisanya sama persis.
 
 ---
 
-## 1. Property wrapper: yang paling sering salah
+## 1. `@StateObject` — satu-satunya property wrapper baru yang wajib Anda pahami
 
-Ini bagian terpenting untuk Anda. Di iOS 13, SwiftUI **belum punya `@StateObject`** —
-baru ada di iOS 14. Jadi banyak tutorial lama mengajarkan `@ObservedObject` untuk
-segalanya, dan kebiasaan itu sekarang menjadi bug.
+Di iOS 13 `@StateObject` **belum ada**. Baru muncul di iOS 14. Jadi kalau Anda belajar
+SwiftUI di era iOS 13, Anda diajarkan `@ObservedObject` untuk segalanya — dan itu
+memang satu-satunya pilihan waktu itu.
 
-| Wrapper | Sejak | Artinya | Analogi UIKit |
-|---|---|---|---|
-| `@State` | iOS 13 | Nilai sederhana milik View (`Bool`, `String`). | Property biasa di ViewController. |
-| `@Binding` | iOS 13 | Pinjaman *dua arah* ke `@State` milik orang lain. | `inout`, atau delegate untuk melapor balik. |
-| `@ObservedObject` | iOS 13 | View **memakai** object, tapi tidak memilikinya. | Property `weak var` ke object milik orang lain. |
-| `@StateObject` | **iOS 14** | View **memiliki** object. Dibuat sekali seumur hidup View. | `let viewModel = ...` di `init` ViewController. |
-| `@Published` | iOS 13 | Property yang otomatis memberi tahu View kalau berubah. | Manual panggil `tableView.reloadData()`. |
-| `@EnvironmentObject` | iOS 13 | Object yang diturunkan ke seluruh anak View. | Singleton, tapi terbatas pada subtree. |
-
-### Kenapa salah pakai `@ObservedObject` itu fatal
+Masalahnya, `@ObservedObject` tidak pernah dimaksudkan untuk *membuat* object.
 
 ```swift
-// ❌ SALAH — ViewModel lahir ulang setiap kali body dievaluasi
+// Cara iOS 13 yang dulu terpaksa dipakai
 struct TransferView: View {
-    @ObservedObject var viewModel = TransferViewModel(...)
+    @ObservedObject var viewModel = TransferViewModel()
 }
 ```
 
-Struct View di SwiftUI **dibuat ulang terus-menerus** — puluhan kali per detik saat
-scroll. Itu normal dan murah, karena View hanyalah deskripsi, bukan object di layar.
+Struct `View` di SwiftUI dibuat ulang terus-menerus — puluhan kali per detik saat
+scroll. Itu normal dan murah, karena `View` cuma *deskripsi*, bukan object di layar.
 
-Tapi `@ObservedObject` tidak menyimpan apa pun. Jadi setiap kali View dibuat ulang,
-`TransferViewModel(...)` dijalankan lagi: nominal yang sudah diketik hilang, request
-yang sedang jalan ditinggalkan, dan `deinit` menumpuk.
+Tapi `@ObservedObject` **tidak menyimpan apa pun**. Ia hanya "mengamati" object yang
+diberikan. Jadi setiap kali struct View dibuat ulang, `TransferViewModel()` ikut
+dijalankan lagi:
+
+- nominal yang sudah diketik hilang,
+- request yang sedang jalan ditinggalkan,
+- instance ViewModel menumpuk.
 
 ```swift
-// ✅ BENAR — SwiftUI menyimpan object ini, dibuat tepat sekali
+// Cara sekarang
 struct TransferScreen: View {
     @StateObject private var viewModel: TransferViewModel
 }
 ```
 
-`@StateObject` menyimpan object di luar struct View, di penyimpanan internal SwiftUI
-yang terikat pada *identitas* layar, bukan pada struct-nya. Inilah alasan template ini
-memisahkan `NamaScreen` (yang punya `@StateObject`) dari `NamaView` (yang cuma
-menerima `@ObservedObject`).
+`@StateObject` menyimpan object di penyimpanan internal SwiftUI yang terikat pada
+**identitas layar**, bukan pada struct View. Dibuat tepat sekali, bertahan selama layar
+itu ada, dilepas saat layar hilang.
 
-**Cara mengingat:** yang membuat, pakai `@StateObject`. Yang menerima, pakai
-`@ObservedObject`.
+**Aturannya satu kalimat:** yang **membuat** object pakai `@StateObject`; yang cuma
+**menerima** object pakai `@ObservedObject`.
 
----
-
-## 2. ViewController → View + ViewModel
-
-Dulu satu `UIViewController` memegang semuanya:
+Itulah — dan hanya itu — alasan template ini memisahkan `NamaScreen` dari `NamaView`:
 
 ```swift
-final class TransferViewController: UIViewController {
-    @IBOutlet weak var amountField: UITextField!
-    var service = TransferService.shared
+struct TransferScreen: View {                    // yang MEMILIKI
+    @StateObject private var viewModel: TransferViewModel
+    var body: some View { TransferView(viewModel: viewModel) }
+}
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        amountField.delegate = self
-    }
-
-    @IBAction func submitTapped() {
-        service.submit(...) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.activityIndicator.stopAnimating()
-                // ...
-            }
-        }
-    }
+struct TransferView: View {                      // yang MERENDER
+    @ObservedObject private var viewModel: TransferViewModel
 }
 ```
 
-Sekarang dipecah tiga:
-
-```swift
-// TransferView.swift — hanya menggambar
-TextField("Nominal", text: $viewModel.amount)
-PrimaryButton("Lanjut", isLoading: viewModel.isLoading, action: viewModel.didTapReview)
-
-// TransferViewModel.swift — hanya state, tidak tahu UIKit
-@Published public var amount = ""
-@Published public private(set) var isLoading = false
-
-// SubmitTransferUseCase.swift — hanya aturan bisnis
-func execute(destinationAccount: String, amountText: String) async throws -> TransferReceipt
-```
-
-**Kenapa:** ViewController lama tidak bisa dites tanpa membuat layar. ViewModel bisa
-dites sebagai object biasa, dan UseCase bahkan tidak butuh UI sama sekali. Yang
-tersisa di View cuma tata letak — bagian yang memang paling baik diperiksa dengan mata.
-
-`$viewModel.amount` itu `@Binding`: tanda `$` berarti "beri saya jalur dua arah ke
-property ini", pengganti `textFieldDidChange`.
+Property wrapper lain yang Anda sudah pakai tidak berubah sama sekali: `@State`,
+`@Binding`, `@EnvironmentObject`, `@Published` berfungsi persis seperti di iOS 13.
 
 ---
 
-## 3. Delegate → closure
+## 2. `NavigationStack` — navigasi jadi data
 
-Dulu, mengirim hasil kembali ke pemanggil butuh protokol:
-
-```swift
-protocol PasswordViewControllerDelegate: AnyObject {
-    func passwordViewController(_ vc: PasswordViewController, didAuthenticate session: AuthSession)
-}
-
-weak var delegate: PasswordViewControllerDelegate?
-```
-
-Sekarang cukup closure (`PasswordViewModel.swift`):
+Di iOS 13 navigasi SwiftUI adalah `NavigationLink` dengan `isActive`:
 
 ```swift
-private let onAuthenticated: (AuthSession) -> Void
+NavigationLink(destination: TransferView(), isActive: $showTransfer) { ... }
 ```
 
-**Kenapa:** protokol delegate butuh tiga tempat (deklarasi, property `weak`,
-implementasi di sisi lain) untuk menyampaikan satu kejadian. Closure cuma satu baris,
-dan tipenya sudah menjelaskan apa yang dikirim.
+Ini sumber banyak penderitaan: destination dibangun lebih awal walaupun belum
+dibuka, `isActive` gampang tidak sinkron, dan pada list panjang sering muncul layar
+blank atau pop sendiri.
 
-**Yang tetap sama:** aturan `[weak self]`. Dulu `weak var delegate` mencegah siklus;
-sekarang `[weak self]` di dalam closure yang melakukannya. Bahayanya identik — closure
-yang menangkap `self` secara kuat lalu disimpan sebagai property adalah retain cycle,
-persis seperti `var delegate` yang lupa `weak`.
-
-Delegate masih tepat kalau satu pihak perlu melaporkan **banyak** kejadian berbeda.
-Untuk satu kejadian, closure lebih ringan.
-
----
-
-## 4. NotificationCenter global → callback bertipe
-
-Dulu, sesi kedaluwarsa biasanya disiarkan ke seluruh aplikasi:
-
-```swift
-NotificationCenter.default.post(name: .unauthorized, object: nil)
-```
-
-Sekarang (`AppCoordinator.swift`):
-
-```swift
-apiClient.setUnauthorizedHandler { [weak self] in
-    Task { @MainActor in self?.handleUnauthorizedSession() }
-}
-```
-
-**Kenapa:** dengan `NotificationCenter`, tidak ada satu pun tempat di kode yang bisa
-menjawab "siapa yang menangani ini?". Jawabannya baru ketahuan saat runtime, dan kalau
-dua layar sama-sama mendengarkan, dua-duanya bereaksi. Callback bertipe punya tepat
-satu pemilik, terlihat di `AppCoordinator`, dan bisa dites.
-
----
-
-## 5. UINavigationController → NavigationStack
-
-Dulu navigasi adalah perintah:
-
-```swift
-let vc = TransferViewController()
-vc.hidesBottomBarWhenPushed = true
-navigationController?.pushViewController(vc, animated: true)
-```
-
-Sekarang navigasi adalah **data** (`MainFlowView.swift`):
+Sekarang path adalah array biasa:
 
 ```swift
 enum MainRoute: Hashable, Sendable {
     case transfer
 }
 
-router.push(.transfer)     // hanya menambah nilai ke array
-```
-
-```swift
 NavigationStack(path: $router.path) {
     MainTabView(...)
         .navigationDestination(for: MainRoute.self) { route in
-            destination(for: route)          // route mana → layar apa
+            switch route {
+            case .transfer: TransferScreen(...)
+            }
         }
 }
+
+router.push(.transfer)      // cuma menambah nilai ke array
 ```
 
-**Kenapa:** `push(vc)` berarti Anda menyerahkan **object layar yang sudah jadi**. Siapa
-pun yang memegang referensi ke object itu bisa menahannya hidup setelah di-pop — sumber
-memory leak paling umum di pola coordinator lama.
+Tiga hal yang berubah drastis:
 
-`router.push(.transfer)` cuma menambah nilai `enum` ke sebuah array. Router tidak
-pernah memegang layar. Saat route dihapus dari array, SwiftUI membongkar layarnya, dan
-tidak ada yang tersisa untuk bocor.
+- **Tidak ada lagi `isActive`.** Tidak ada boolean yang bisa tidak sinkron.
+- **Destination dibangun saat dibutuhkan**, bukan saat layar asal dirender.
+- **Back stack bisa dites.** `XCTAssertEqual(router.path, [.transfer])` — mustahil
+  dilakukan dulu.
 
-Efek sampingnya: back stack Anda sekarang bisa dicetak, disimpan, dan dites.
-
-```swift
-XCTAssertEqual(router.path, [.transfer])   // mustahil dilakukan pada UINavigationController
-```
+`switch` di `navigationDestination` bersifat **exhaustive**. Tambah satu case di enum
+tanpa menanganinya, dan build gagal. Ini penting; lihat bagian 5.
 
 ---
 
-## 6. Coordinator + childCoordinators → flow view + router
+## 3. `Task` — pengganti `DispatchQueue`
 
-Pola coordinator lama butuh pembukuan manual:
+`Task` adalah kotak untuk menjalankan kode `async`. Padanan kasarnya
+`DispatchQueue.global().async { }`, dengan dua kemampuan tambahan.
+
+**Bisa dibatalkan:**
 
 ```swift
-final class MainCoordinator {
-    var childCoordinators: [Coordinator] = []
+private var loginTask: Task<Void, Never>?
 
-    func showTransfer() {
-        let child = TransferCoordinator(navigationController: nav)
-        childCoordinators.append(child)          // ingat menambah
-        child.parent = self
-        child.start()
+func didTapLogin() {
+    loginTask?.cancel()                    // batalkan yang lama
+    loginTask = Task { [weak self] in
+        let session = try await useCase.execute(...)
+        guard !Task.isCancelled else { return }
+        self?.finishLogin(with: session)
     }
+}
 
-    func childDidFinish(_ child: Coordinator) {
-        childCoordinators.removeAll { $0 === child }   // dan ingat menghapus
-    }
+deinit { loginTask?.cancel() }             // layar ditutup, request dihentikan
+```
+
+Dulu untuk membatalkan `URLSessionDataTask` Anda harus menyimpan referensinya sendiri
+dan ingat memanggil `cancel()` di banyak jalur keluar. Sekarang polanya seragam.
+
+**Mewarisi thread dari tempat pembuatannya.** `Task` yang dibuat di dalam class
+`@MainActor` otomatis jalan di main thread. Anda tidak perlu menulis
+`DispatchQueue.main.async` lagi setelah `await` selesai — itu sebabnya di kode di atas
+`self?.finishLogin(...)` langsung dipanggil tanpa hop manual.
+
+---
+
+## 4. `@MainActor` dan `Sendable` — aturan thread yang dicek compiler
+
+Ini yang paling terasa asing, jadi pelan-pelan.
+
+### Masalah yang ingin diselesaikan
+
+Dulu aturan thread hanya hidup di komentar:
+
+```swift
+// HARUS dipanggil dari main thread!
+func updateUI() { ... }
+```
+
+Compiler tidak tahu apa-apa soal komentar itu. Kalau ada yang memanggilnya dari
+background, aplikasi crash — atau lebih buruk, cuma kadang-kadang rusak, di perangkat
+pengguna, yang tidak bisa Anda reproduksi.
+
+### `@MainActor` = "kode ini cuma boleh jalan di main thread"
+
+```swift
+@MainActor
+public final class TransferViewModel: ObservableObject { ... }
+```
+
+Satu label di atas class, dan seluruh isinya terikat main thread. Bedanya dengan
+komentar: **compiler menolak** siapa pun yang memanggil dari thread lain tanpa `await`.
+
+Dulu Anda menulis `DispatchQueue.main.async { }` berkali-kali karena tidak yakin sedang
+di thread mana. Sekarang Anda menandai sekali di class, dan compiler yang menjaga.
+
+### `Sendable` = "nilai ini aman dipindah antar thread"
+
+Anggap saja stempel. Compiler memakainya untuk menolak kode yang memindahkan benda
+tidak aman antar thread.
+
+| Tipe | Aman dipindah? | Kenapa |
+|---|---|---|
+| `struct` isi `String`, `Int`, `Bool` | ✅ ya | Dicopy saat dipindah, tidak ada yang berbagi |
+| `enum` tanpa payload aneh | ✅ ya | Sama, nilai |
+| `class` dengan `var` mutable | ❌ tidak | Dua thread bisa menulis bersamaan |
+| `class` dengan `@MainActor` | ✅ ya | Semua akses diantre di main thread |
+| `NumberFormatter`, `CADisplayLink` | ❌ tidak | Class mutable milik Apple |
+
+Kenapa terasa asing padahal sudah lama ada: di Swift 5 stempel ini **tidak ditagih**.
+Aturannya ada, tapi tidak ada yang memeriksa. Swift 6 mulai memeriksa. Kode Anda tidak
+berubah — yang berubah cuma siapa yang menagih.
+
+### Satu jebakan: tipe `public` tidak dapat stempel otomatis
+
+```swift
+public struct ScreenStyle {          // ❌ error di static let
+    public let background: Color
+    public let horizontalPadding: CGFloat
+
+    public static let standard = ScreenStyle()
 }
 ```
 
-Kalau `childDidFinish` tidak terpanggil — misalnya pengguna swipe-back, bukan menekan
-tombol Back — coordinator itu bocor bersama seluruh ViewModel-nya.
+Isinya `Color` dan `CGFloat` yang dua-duanya aman. Tapi Swift **tidak pernah**
+menyimpulkan `Sendable` otomatis untuk tipe `public`, karena konformansi itu bagian
+dari kontrak API Anda — kalau suatu hari Anda menambah satu property tidak aman,
+stempel itu hilang diam-diam dan semua modul yang memakainya rusak.
 
-Sekarang tidak ada pembukuan sama sekali. `AppCoordinator` hanya mengubah `rootState`,
-dan SwiftUI membongkar flow lama berikut router dan ViewModel-nya. Yang dulu Anda kerjakan
-dengan disiplin, sekarang dikerjakan oleh kepemilikan view tree.
+Perbaikannya satu kata:
+
+```swift
+public struct ScreenStyle: Sendable { ... }
+```
+
+Untuk `struct` internal, Swift menyimpulkannya sendiri. Jadi aturan praktisnya: **tiap
+tipe `public` yang isinya nilai, tulis `Sendable` sekalian.**
 
 ---
 
-## 7. Singleton → injeksi di composition root
+## 5. Lima keluhan lama, dan apa yang menanganinya di sini
 
-Dulu:
+Bagian ini menjawab masalah nyata, bukan teori.
+
+### a. Layar tiba-tiba blank
+
+Penyebab tersering di era iOS 13–15: `NavigationLink` + `isActive` yang tidak sinkron,
+`AnyView` yang menghapus type identity sehingga SwiftUI salah membongkar view, dan
+ViewModel yang lahir ulang karena `@ObservedObject`.
+
+Di sini: tidak ada `isActive` (path berupa array), `AnyView` dilarang oleh
+`Scripts/check_architecture.sh`, dan ViewModel dipegang `@StateObject`.
+
+**Bukan jaminan.** `NavigationStack` punya bug sendiri. Tapi tiga penyebab paling umum
+itu memang hilang secara struktural.
+
+### b. `onAppear` bolak-balik, analytics visit jadi tidak valid
+
+Ini yang paling penting. `onAppear` di SwiftUI **memang** dipanggil berkali-kali:
+saat re-render, saat kembali dari background, saat pindah tab, saat layar di atasnya
+di-pop. Menembakkan analytics dari `onAppear` pasti menghasilkan angka yang membengkak.
+
+Template ini membuat `onAppear` idempotent supaya *inquiry* tidak berulang:
 
 ```swift
-TransferService.shared.submit(...)
-```
-
-Sekarang dependency masuk lewat `init`, dan satu-satunya tempat yang memilih
-implementasi konkret adalah `AppCoordinator`:
-
-```swift
-if configuration.useMockServices {
-    authRepository = MockAuthRepository()
-} else {
-    authRepository = RemoteAuthRepository(apiClient: apiClient)
+public func onAppear() {
+    guard content == nil, task == nil else { return }   // sudah jalan, jangan ulangi
+    load()
 }
 ```
 
-**Kenapa:** dengan singleton, mustahil menjalankan test tanpa jaringan, dan mustahil
-menjalankan aplikasi demo tanpa backend. Di template ini keduanya cukup dengan
-mengubah satu flag. `FeatureAuth` bahkan tidak tahu ada yang namanya mock — ia hanya
-tahu protokol `AuthRepositoryProtocol`.
+Tapi untuk **analytics**, cara yang benar bukan `onAppear` sama sekali. Tembakkan dari
+**perubahan path**, karena path berubah tepat sekali per navigasi:
+
+```swift
+// di NavigationRouter — satu tempat, tidak mungkin lupa, tidak mungkin dobel
+public func push(_ route: Route) {
+    path.append(route)
+    Analytics.screenView(String(describing: route))
+}
+```
+
+Ini keuntungan konkret dari navigasi berbentuk data: kejadian "pindah layar" jadi
+punya satu titik yang bisa diukur. Template belum memasang ini — sengaja, karena
+SDK analytics tiap perusahaan berbeda — tapi tempatnya sudah tersedia.
+
+### c. Object tidak pernah `deinit`
+
+Perlu diluruskan dulu: **Anda tidak perlu menulis `deinit` supaya object hilang.**
+`deinit` bukan perintah "hapus" — dia hanya pemberitahuan bahwa object *sudah* dihapus.
+Object hilang otomatis saat tidak ada lagi yang memegangnya.
+
+Jadi pertanyaan yang benar bukan "apakah tiap ViewModel perlu `deinit`", melainkan
+**"siapa yang masih memegang ViewModel ini?"**. Tersangka biasanya:
+
+- closure yang menangkap `self` secara kuat, lalu disimpan sebagai property,
+- ViewModel yang disimpan di singleton, cache, atau router,
+- ViewModel dibuat di luar lalu dioper masuk, sementara pembuatnya hidup lebih lama.
+
+Di template ini rantai kepemilikannya sengaja dibuat satu arah:
+
+```text
+Screen (@StateObject) → ViewModel → closure → [weak router]
+Router → [Route]  (nilai, bukan object)
+```
+
+Router tidak pernah memegang layar, jadi begitu route dihapus dari array, tidak ada
+yang tersisa memegang ViewModel dan ia hilang sendiri.
+
+`deinit` tetap ditulis di ViewModel template — tapi **hanya untuk membatalkan task**,
+bukan untuk menghapus apa pun:
+
+```swift
+deinit { loginTask?.cancel() }
+```
+
+Cara memeriksanya: jalankan, buka Console, filter kategori `lifecycle` dan
+`navigation`. Satu baris `POP` harus diikuti `DEINIT` milik ViewModel layar itu. Kalau
+`POP` ada tapi `DEINIT` tidak muncul, berarti masih ada yang memegang.
+
+### d. Routing perlu whitelist di tiap layar, berat, gampang lupa
+
+Kalau dulu Anda punya registry pusat tempat setiap layar harus mendaftar, dan lupa
+mendaftar berarti layar itu tidak bisa dituju — masalah itu hilang di sini, karena
+`switch` di `navigationDestination` bersifat **exhaustive**:
+
+```swift
+enum MainRoute: Hashable, Sendable {
+    case transfer
+    case history          // ← tambah case baru
+}
+
+switch route {
+case .transfer: TransferScreen(...)
+// tidak menangani .history → BUILD GAGAL
+}
+```
+
+Lupa mendaftar berubah dari **kegagalan runtime yang sunyi** menjadi **error compile**.
+Ini perbedaan besar: yang dulu baru ketahuan saat QA menekan tombol dan tidak terjadi
+apa-apa, sekarang ketahuan sebelum aplikasi sempat jalan.
+
+### e. Cold launch lambat karena banyak SDK
+
+Sejujurnya, **template tidak bisa memperbaiki ini.** Kalau sepuluh SDK melakukan
+inisialisasi sinkron di `didFinishLaunching`, arsitektur apa pun akan lambat.
+
+Yang template lakukan cuma tidak memperburuk:
+
+- `AppDelegate` sengaja tipis — hanya memasang appearance.
+- Splash menjalankan timer tampil minimum dan network inquiry **paralel**, bukan
+  berurutan. Kalau service cepat, logo tetap stabil; kalau lambat, aplikasi tidak
+  menambah delay kedua.
+- Local package default-nya static library, jadi tidak menambah beban dyld seperti
+  puluhan dynamic framework.
+
+Untuk mendiagnosis SDK Anda sendiri, ukur dulu sebelum menebak. Di scheme, tambahkan
+environment variable `DYLD_PRINT_STATISTICS = 1`; Console akan mencetak berapa lama
+dyld memuat framework sebelum `main()` dijalankan. Kalau angka itu besar, masalahnya
+di jumlah dynamic framework. Kalau kecil tapi launch tetap lama, masalahnya di kode
+inisialisasi SDK — dan itu diukur dengan Time Profiler pada cold launch.
 
 ---
 
-## 8. Satu project besar → local Swift Package per flow
+## 6. Yang tidak berubah
 
-Dulu semua file ada di satu target `.xcodeproj`, dan `internal` berarti "terlihat oleh
-seluruh aplikasi". Tidak ada yang mencegah layar Transfer memanggil isi layar Dashboard.
-
-Sekarang setiap flow adalah package sendiri, dan batasnya dipaksakan compiler: kalau
-`FeatureTransfer` tidak mencantumkan `FeatureDashboard` sebagai dependency, `import`-nya
-tidak akan bisa.
-
-Tambahannya, `project.yml` + XcodeGen berarti **`.xcodeproj` tidak lagi di-commit**.
-File itu di-generate. Konflik merge pada `project.pbxproj` — yang dulu rutin terjadi
-setiap kali dua orang menambah file — hilang sepenuhnya.
-
-Konsekuensi yang harus Anda ingat: setelah clone, jalankan `make project` dulu.
-
----
-
-## 9. Threading
-
-Ini dibahas lengkap di `Docs/SWIFT_CONCURRENCY.md`. Ringkasnya:
-
-| Dulu | Sekarang |
-|---|---|
-| `DispatchQueue.main.async { }` | `@MainActor` pada class atau fungsi |
-| `DispatchQueue.global().async { }` | `Task { }` |
-| completion handler | `async` / `await` |
-| komentar `// harus di main thread` | dicek compiler, gagal saat build |
-| `// tidak thread-safe, hati-hati` | `Sendable` |
-
-Perbedaan pentingnya: dulu aturan thread hanya ada di kepala Anda dan di komentar.
-Sekarang aturan itu ada di tipe, dan compiler menolak kode yang melanggarnya sebelum
-aplikasi sempat jalan. Semua error Swift 6 yang Anda temui saat migrasi adalah tagihan
-dari janji-janji yang selama ini hanya tertulis di komentar.
-
----
-
-## 10. Yang **tidak** berubah
-
-Supaya seimbang — banyak yang Anda kuasai tetap berlaku:
-
-- MVVM, UseCase, Repository. Pemisahan lapisan tidak berubah sama sekali.
-- Aturan kepemilikan dan `[weak self]`. Retain cycle masih retain cycle.
-- Instruments: Time Profiler, Allocations, Leaks, Core Animation. Tetap alat utama.
-- Naluri performa Anda. "Jangan parsing JSON di jalur render" dulu berlaku untuk
-  `cellForRowAt`, sekarang berlaku untuk `body`. Alasannya sama persis: fungsi itu
-  dipanggil sangat sering, jadi harus murah.
-- Codable, URLSession, Keychain, mTLS, request signing. Tidak ada yang berubah.
-
-Yang berubah pada dasarnya cuma dua: **siapa yang memiliki layar** (dulu Anda,
-sekarang view tree), dan **siapa yang menegakkan aturan thread** (dulu komentar,
-sekarang compiler).
+- MVVM, pemisahan lapisan, `Codable`, `URLSession`, Keychain — sama persis.
+- Aturan `[weak self]`. Retain cycle masih retain cycle.
+- Instruments: Time Profiler, Allocations, Leaks, Core Animation.
+- Naluri performa Anda. "Jangan kerja berat di jalur render" tetap berlaku; sekarang
+  jalur itu bernama `body`.
