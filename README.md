@@ -776,6 +776,7 @@ Sesuaikan nama simulator dengan runtime yang terpasang.
 - `Docs/SWIFT_CONCURRENCY.md` — `async`/`await`, `Task`, `@MainActor`, dan `Sendable` untuk pembaca yang terbiasa GCD.
 - `Docs/CODE_MAP.md` — kegunaan setiap file, dan apa yang rusak kalau file itu dihapus.
 - `Docs/FROM_IOS13.md` — untuk yang sudah menulis SwiftUI sejak iOS 13: beda `@StateObject` vs `@ObservedObject`, `NavigationStack`, `Task`, `@MainActor`, `Sendable`, dan lima keluhan lama (layar blank, `onAppear` dobel, object tidak deinit, whitelist routing, cold launch).
+- `Docs/SCALING.md` — rancangan untuk ratusan layar: dependency per feature, deep link, dan cara menahan composition boundary agar tidak jadi god module.
 
 Referensi upstream:
 
