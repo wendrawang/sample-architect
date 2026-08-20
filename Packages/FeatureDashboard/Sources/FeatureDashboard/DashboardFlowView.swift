@@ -14,7 +14,7 @@ public enum DashboardRoute: Hashable, Sendable {
 /// menghasilkan satu tipe konkret, jadi `AnyView` tetap tidak diperlukan dan `switch`-nya
 /// tetap exhaustive.
 public struct DashboardFlowView<Destination: View>: View {
-    @StateObject private var router = NavigationRouter<DashboardRoute>()
+    @StateObject private var router = NavigationRouter<DashboardRoute>(rootScreen: "dashboard")
     @ObservedObject private var viewModel: DashboardViewModel
 
     private let destination: (DashboardRoute) -> Destination

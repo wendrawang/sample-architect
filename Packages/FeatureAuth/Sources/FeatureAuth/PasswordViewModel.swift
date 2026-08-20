@@ -62,11 +62,11 @@ public final class PasswordViewModel: ObservableObject {
         presentation.present(
             bottomSheet: BottomSheetModel(
                 iconSystemName: "key.fill",
-                title: "Bantuan password",
-                message: "Pilih flow reset atau aktivasi password sesuai contract aplikasi Anda.",
+                title: AuthStrings.passwordHelpTitle,
+                message: AuthStrings.passwordHelpMessage,
                 actions: [
-                    PresentationAction(id: "reset-password", title: "Reset Password"),
-                    PresentationAction(id: "dismiss", title: "Nanti", role: .secondary)
+                    PresentationAction(id: "reset-password", title: AuthStrings.passwordHelpReset),
+                    PresentationAction(id: "dismiss", title: AuthStrings.passwordHelpLater, role: .secondary)
                 ]
             )
         )
@@ -75,7 +75,7 @@ public final class PasswordViewModel: ObservableObject {
     public func didTapBiometric() {
         presentation.show(
             snackbar: SnackbarModel(
-                message: "Hubungkan action ini ke LocalAuthentication.",
+                message: AuthStrings.passwordBiometricHint,
                 iconSystemName: "faceid"
             )
         )
@@ -90,11 +90,11 @@ public final class PasswordViewModel: ObservableObject {
         isLoading = false
         presentation.present(
             blocker: ScreenBlockerModel(
-                title: "Login belum berhasil",
+                title: AuthStrings.passwordErrorTitle,
                 message: error.localizedDescription,
                 actions: [
-                    PresentationAction(id: "retry", title: "Coba Lagi"),
-                    PresentationAction(id: "dismiss", title: "Tutup", role: .secondary)
+                    PresentationAction(id: "retry", title: AuthStrings.passwordErrorRetry),
+                    PresentationAction(id: "dismiss", title: AuthStrings.passwordErrorDismiss, role: .secondary)
                 ]
             )
         )

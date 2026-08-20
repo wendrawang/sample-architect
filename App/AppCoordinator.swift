@@ -1,6 +1,7 @@
 import Combine
 import CoreGuards
 import CoreKit
+import CoreNavigation
 import CoreNetwork
 import FeatureAuth
 import FeatureSplash
@@ -70,6 +71,8 @@ final class AppCoordinator: ObservableObject {
     }
 
     func start() {
+        ScreenTracker.use(AppScreenTracker())
+
         rootGuard.onReasonChanged = { [weak self] reason in
             guard let self else { return }
             self.rootState.blocker = reason

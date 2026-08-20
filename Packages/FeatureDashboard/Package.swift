@@ -23,7 +23,10 @@ let package = Package(
         ),
         .testTarget(
             name: "FeatureDashboardTests",
-            dependencies: ["FeatureDashboard"]
+            dependencies: [
+                "FeatureDashboard",
+                .product(name: "CoreTestSupport", package: "Core")
+            ]
         )
     ],
     swiftLanguageModes: [.v6]

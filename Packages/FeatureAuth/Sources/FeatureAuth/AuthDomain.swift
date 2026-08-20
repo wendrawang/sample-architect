@@ -30,9 +30,9 @@ public enum AuthValidationError: Error, LocalizedError, Equatable, Sendable {
     public var errorDescription: String? {
         switch self {
         case .usernameTooShort:
-            return "Username minimal 3 karakter."
+            return AuthStrings.errorUsernameTooShort
         case .passwordTooShort:
-            return "Password minimal 6 karakter."
+            return AuthStrings.errorPasswordTooShort
         }
     }
 }

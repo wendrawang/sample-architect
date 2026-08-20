@@ -20,7 +20,8 @@ let package = Package(
                 .product(name: "CoreNetwork", package: "Core"),
                 .product(name: "CorePresentation", package: "Core"),
                 .product(name: "DesignSystem", package: "DesignSystem")
-            ]
+            ],
+            resources: [.process("Resources")]
         ),
         .testTarget(
             name: "FeatureAuthTests",

@@ -15,11 +15,15 @@ public final class NavigationRouter<Route: Hashable>: ObservableObject {
     }
 
     private let label: String
+    private let rootScreen: String
     private let lifecycleProbe: LifecycleProbe
 
-    public init() {
+    /// - Parameter rootScreen: nama layar dasar flow ini, dipakai saat path kembali kosong
+    ///   sehingga screen view tetap tercatat ketika pengguna menekan Back.
+    public init(rootScreen: String) {
         let name = String(describing: Route.self)
         label = name
+        self.rootScreen = rootScreen
         lifecycleProbe = LifecycleProbe("NavigationRouter<\(name)>")
     }
 
@@ -50,5 +54,8 @@ public final class NavigationRouter<Route: Hashable>: ObservableObject {
         AppLogger.navigation.debug(
             "\(verb, privacy: .public) \(self.label, privacy: .public) depth \(oldPath.count, privacy: .public) -> \(newPath.count, privacy: .public)"
         )
+
+        let visible = newPath.last.map { String(describing: $0) } ?? rootScreen
+        ScreenTracker.track(visible)
     }
 }

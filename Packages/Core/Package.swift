@@ -9,7 +9,9 @@ let package = Package(
         .library(name: "CoreNavigation", targets: ["CoreNavigation"]),
         .library(name: "CoreNetwork", targets: ["CoreNetwork"]),
         .library(name: "CorePresentation", targets: ["CorePresentation"]),
-        .library(name: "CoreGuards", targets: ["CoreGuards"])
+        .library(name: "CoreGuards", targets: ["CoreGuards"]),
+        // Hanya untuk test target. Tidak pernah di-link ke aplikasi.
+        .library(name: "CoreTestSupport", targets: ["CoreTestSupport"])
     ],
     dependencies: [
         .package(
@@ -32,6 +34,7 @@ let package = Package(
         ),
         .target(name: "CorePresentation", dependencies: ["CoreKit"]),
         .target(name: "CoreGuards", dependencies: ["CoreKit"]),
+        .target(name: "CoreTestSupport"),
         .testTarget(
             name: "CoreNavigationTests",
             dependencies: ["CoreNavigation"]

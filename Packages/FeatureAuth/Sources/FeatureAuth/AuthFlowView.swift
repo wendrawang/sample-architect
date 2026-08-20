@@ -8,7 +8,7 @@ public enum AuthRoute: Hashable, Sendable {
 }
 
 public struct AuthFlowView: View {
-    @StateObject private var router = NavigationRouter<AuthRoute>()
+    @StateObject private var router = NavigationRouter<AuthRoute>(rootScreen: "auth.username")
 
     private let dependencies: any AuthDependencies
     private let onAuthenticated: (AuthSession) -> Void
@@ -42,7 +42,7 @@ public struct AuthFlowView: View {
                 dependencies: dependencies,
                 onAuthenticated: onAuthenticated
             )
-            .navigationTitle("Masukkan Password")
+            .navigationTitle(AuthStrings.passwordNavigationTitle)
             .navigationBarTitleDisplayMode(.inline)
         }
     }

@@ -44,20 +44,20 @@ public struct UsernameView: View {
                     Spacer()
                     Image(systemName: "bell")
                         .font(.system(size: 21, weight: .medium))
-                    Text("ID")
+                    Text(AuthStrings.usernameLocale)
                         .font(AppTypography.label)
                         .foregroundColor(AppColor.accent)
                 }
 
                 HStack(alignment: .center, spacing: AppSpacing.md) {
                     VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                        Text("Cerdas melawan\npenipuan digital")
+                        Text(AuthStrings.usernameHeroTitle)
                             .font(AppTypography.title)
                             .foregroundColor(AppColor.charcoal)
-                        Text("Lindungi keamanan data diri Anda.")
+                        Text(AuthStrings.usernameHeroSubtitle)
                             .font(AppTypography.body)
                             .foregroundColor(AppColor.secondaryText)
-                        Button("Pelajari Sekarang", action: viewModel.didTapHelp)
+                        Button(AuthStrings.usernameHeroAction, action: viewModel.didTapHelp)
                             .font(AppTypography.label)
                             .foregroundColor(AppColor.accent)
                     }
@@ -82,12 +82,12 @@ public struct UsernameView: View {
 
     private var quickActions: some View {
         LazyVGrid(columns: UsernameStyle.menuColumns, spacing: AppSpacing.lg) {
-            quickAction("Transfer", icon: "arrow.left.arrow.right")
-            quickAction("Tarik Tunai", icon: "banknote")
-            quickAction("PIN Token", icon: "rectangle.and.hand.point.up.left")
-            quickAction("e-Money", icon: "wallet.pass")
-            quickAction("Scan", icon: "qrcode.viewfinder")
-            quickAction("Promo", icon: "tag")
+            quickAction(AuthStrings.usernameQuickTransfer, icon: "arrow.left.arrow.right")
+            quickAction(AuthStrings.usernameQuickCash, icon: "banknote")
+            quickAction(AuthStrings.usernameQuickToken, icon: "rectangle.and.hand.point.up.left")
+            quickAction(AuthStrings.usernameQuickEMoney, icon: "wallet.pass")
+            quickAction(AuthStrings.usernameQuickScan, icon: "qrcode.viewfinder")
+            quickAction(AuthStrings.usernameQuickPromo, icon: "tag")
         }
         .padding(.vertical, AppSpacing.lg)
         .padding(.horizontal, AppSpacing.sm)
@@ -116,26 +116,26 @@ public struct UsernameView: View {
     private var loginForm: some View {
         VStack(alignment: .leading, spacing: AppSpacing.lg) {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Text("Masuk ke OCBC Indonesia")
+                Text(AuthStrings.usernameTitle)
                     .font(AppTypography.title)
-                Text("Masukkan username Internet Banking kamu.")
+                Text(AuthStrings.usernameSubtitle)
                     .font(AppTypography.body)
                     .foregroundColor(AppColor.secondaryText)
             }
 
             BankInputCard(
-                title: "Username",
-                placeholder: "Masukkan username",
+                title: AuthStrings.usernameFieldTitle,
+                placeholder: AuthStrings.usernameFieldPlaceholder,
                 text: $viewModel.username
             )
 
             PrimaryButton(
-                "Lanjut",
+                AuthStrings.usernameContinue,
                 isEnabled: viewModel.canContinue,
                 action: viewModel.didTapContinue
             )
 
-            Button("Butuh bantuan?", action: viewModel.didTapHelp)
+            Button(AuthStrings.usernameHelp, action: viewModel.didTapHelp)
                 .font(AppTypography.label)
                 .foregroundColor(AppColor.brand)
                 .frame(maxWidth: .infinity)

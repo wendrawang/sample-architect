@@ -15,19 +15,19 @@ public struct PasswordView: View {
             onAction: viewModel.handlePresentationAction
         ) {
             VStack(alignment: .leading, spacing: AppSpacing.lg) {
-                Text("Masukkan Password kamu\nuntuk login ke OCBC mobile")
+                Text(AuthStrings.passwordTitle)
                     .font(AppTypography.title)
                     .fontWeight(.regular)
                     .padding(.top, AppSpacing.lg)
 
                 BankInputCard(
-                    title: "Password Login",
-                    placeholder: "Masukkan password login kamu",
+                    title: AuthStrings.passwordFieldTitle,
+                    placeholder: AuthStrings.passwordFieldPlaceholder,
                     text: $viewModel.password,
                     isSecure: true
                 )
 
-                Button("Lupa atau Belum Punya Password?", action: viewModel.didTapForgotPassword)
+                Button(AuthStrings.passwordForgot, action: viewModel.didTapForgotPassword)
                     .font(AppTypography.label)
                     .foregroundColor(AppColor.brand)
                     .underline()
@@ -53,7 +53,7 @@ public struct PasswordView: View {
                     .buttonStyle(ScaleButtonStyle())
 
                     PrimaryButton(
-                        "Lanjut",
+                        AuthStrings.passwordContinue,
                         isLoading: viewModel.isLoading,
                         isEnabled: viewModel.password.count >= 6,
                         action: viewModel.didTapLogin

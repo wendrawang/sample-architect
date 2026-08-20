@@ -48,6 +48,16 @@ check_forbidden 'NavigationLink\(destination:' \
   'NavigationLink(destination:) membangun destination sebelum dibutuhkan; gunakan NavigationLink(value:) atau router.push.' \
   App Packages --glob '*.swift'
 
+# Package yang sudah dilokalisasi. Tambahkan satu baris setiap kali selesai memigrasikan
+# package berikutnya, supaya string yang sudah dipindah tidak diam-diam kembali di-hardcode.
+localized_sources=(
+  Packages/FeatureAuth/Sources
+)
+
+check_forbidden 'Text\("|Button\("|navigationTitle\("|Label\("' \
+  'String user-facing tidak boleh hardcode; pakai NamaStrings dan String Catalog.' \
+  "${localized_sources[@]}" --glob '*.swift'
+
 check_forbidden '\bAnyView\b' \
   'AnyView dilarang pada hot path karena menghapus type identity.' \
   App Packages --glob '*.swift'

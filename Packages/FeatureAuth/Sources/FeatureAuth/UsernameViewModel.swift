@@ -41,11 +41,11 @@ public final class UsernameViewModel: ObservableObject {
         presentation.present(
             bottomSheet: BottomSheetModel(
                 iconSystemName: "questionmark.circle.fill",
-                title: "Butuh bantuan?",
-                message: "Gunakan username Internet Banking Anda. Action sheet ini dapat diganti sesuai kebutuhan setiap feature.",
+                title: AuthStrings.usernameHelp,
+                message: AuthStrings.usernameHelpMessage,
                 actions: [
-                    PresentationAction(id: "contact-support", title: "Hubungi Bantuan"),
-                    PresentationAction(id: "close", title: "Tutup", role: .secondary)
+                    PresentationAction(id: "contact-support", title: AuthStrings.usernameHelpContact),
+                    PresentationAction(id: "close", title: AuthStrings.usernameHelpClose, role: .secondary)
                 ]
             )
         )
@@ -55,7 +55,7 @@ public final class UsernameViewModel: ObservableObject {
         guard id == "contact-support" else { return }
         presentation.show(
             snackbar: SnackbarModel(
-                message: "Action bantuan dipanggil.",
+                message: AuthStrings.usernameHelpInvoked,
                 iconSystemName: "checkmark.circle.fill"
             )
         )
