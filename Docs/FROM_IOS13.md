@@ -324,6 +324,52 @@ Lupa mendaftar berubah dari **kegagalan runtime yang sunyi** menjadi **error com
 Ini perbedaan besar: yang dulu baru ketahuan saat QA menekan tombol dan tidak terjadi
 apa-apa, sekarang ketahuan sebelum aplikasi sempat jalan.
 
+### f. Takut re-render: apa yang sebenarnya terjadi
+
+Perlu diluruskan, karena mudah salah paham: **`@Published` tidak pernah memeriksa
+kesamaan nilai.** Menyetel `isLoading = false` ketika nilainya memang sudah `false` tetap
+mengirim `objectWillChange`, tetap membuat View invalid, dan `body` tetap dievaluasi ulang.
+
+Membuat state `Equatable` **tidak** mengubah hal itu. Yang dibantu `Equatable` adalah
+langkah berikutnya: setelah `body` dievaluasi, SwiftUI membandingkan hasilnya dengan yang
+lama dan melewatkan penggambaran untuk bagian yang tidak berubah.
+
+Jadi ada dua hal berbeda:
+
+| Tahap | Dicegah oleh |
+|---|---|
+| `body` dievaluasi ulang | menjaga agar `@Published` tidak disetel ulang |
+| Layar benar-benar digambar ulang | `Equatable` pada tipe yang dirender |
+
+Kalau Anda benar-benar ingin menghentikan publish-nya, jangan menulis `if` di setiap
+property — kumpulkan state layar jadi satu struct `Equatable`, lalu pasang **satu**
+penjaga di jalur penyetelannya:
+
+```swift
+struct DashboardState: Equatable {
+    var isLoading = false
+    var summary: DashboardSummary?
+}
+
+@Published private(set) var state = DashboardState()
+
+private func update(_ newState: DashboardState) {
+    guard newState != state else { return }   // satu penjaga untuk seluruh layar
+    state = newState
+}
+```
+
+Sekilas soal `Equatable`: hampir semua tipe standar sudah `Equatable`, termasuk `Bool`,
+`Int`, `String`, `Date`, serta `Array` dan `Optional` yang isinya `Equatable`. Struct
+buatan sendiri yang seluruh property-nya `Equatable` cukup ditulis `: Equatable` dan
+Swift menyusun perbandingannya sendiri.
+
+Terakhir, dan ini yang paling sering keliru: **`body` yang dievaluasi ulang bukan masalah
+performa.** `body` memang dirancang untuk sering dipanggil. Yang membuat lag hampir
+selalu **kerja berat di dalam `body`** — memformat angka, mendecode gambar, menyaring
+array besar. Pindahkan pekerjaan itu keluar dulu, dan ukur dengan Time Profiler sebelum
+memburu jumlah re-render.
+
 ### e. Cold launch lambat karena banyak SDK
 
 Sejujurnya, **template tidak bisa memperbaiki ini.** Kalau sepuluh SDK melakukan

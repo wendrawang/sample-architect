@@ -345,6 +345,87 @@ terus sampai `AppCoordinator`, yang bisa mengubah root state sekaligus menyemai 
 - **Menambah kemampuan tidak mengubah signature**, jadi tidak ada lagi init berisi
   sepuluh closure.
 
+### Varian yang lebih tepat kalau tiap tab punya banyak tujuan
+
+Desain di atas mengasumsikan layar yang di-push berangkat dari **root** flow Main. Kalau
+kenyataannya setiap tab punya tujuannya sendiri — Dashboard ke detail poin, Financial ke
+banyak layar, dan seterusnya — satu `MainRoute` untuk semua tab akan tetap membengkak,
+walaupun destination-nya sudah dipindah ke composition root.
+
+Bentuk yang benar untuk kasus itu: **satu `NavigationStack` per tab**, dan setiap tab
+memiliki route enum-nya sendiri di dalam package-nya sendiri.
+
+```swift
+// Packages/FeatureDashboard — Dashboard yang memiliki route-nya, bukan FeatureMain
+public enum DashboardRoute: Hashable, Sendable {
+    case pointDetail(id: String)
+    case transactionHistory
+}
+
+public struct DashboardFlowView: View {
+    @StateObject private var router = NavigationRouter<DashboardRoute>()
+
+    public var body: some View {
+        NavigationStack(path: $router.path) {
+            DashboardScreen(dependencies: dependencies, onIntent: handle)
+                .navigationDestination(for: DashboardRoute.self) { route in
+                    destination(for: route)
+                }
+        }
+    }
+}
+```
+
+`MainTabView` cukup menyusun lima `FlowView`, dan **tidak pernah tahu** ada layar detail
+poin. Menambah tujuan baru di Dashboard tidak menyentuh `FeatureMain` sama sekali.
+
+Tab bar tetap bisa disembunyikan saat push — sejak iOS 16 itu diatur dari layar tujuan,
+bukan dari struktur container:
+
+```swift
+PointDetailScreen(...)
+    .toolbar(.hidden, for: .tabBar)
+```
+
+Jadi Anda tidak perlu memilih antara "route dimiliki tab" dan "tab bar hilang saat push".
+Keduanya bisa sekaligus.
+
+Keuntungan tambahan: back stack tiap tab jadi independen, sehingga berpindah tab tidak
+menghapus posisi tab sebelumnya.
+
+### Tujuan yang berada di tab lain
+
+Untuk kasus seperti bottom sheet dormant account yang bisa mengarah ke mana saja,
+termasuk ke layar milik tab lain: intent **naik** sampai ke `MainFlowView`, dan di sanalah
+perpindahan tab sekaligus penyemaian path dilakukan.
+
+```swift
+public enum MainIntent: Sendable {
+    case openTab(MainTab)
+    case openDashboardRoute(DashboardRoute)
+    case logout
+}
+
+private func handle(_ intent: MainIntent) {
+    switch intent {
+    case .openTab(let tab):
+        selection = tab
+
+    case .openDashboardRoute(let route):
+        selection = .dashboard
+        dashboardRouter.path = [route]      // pindah tab sekaligus semai path-nya
+
+    case .logout:
+        onLogout()
+    }
+}
+```
+
+Yang dijaga tetap sama: Financial tidak pernah meng-`import` Dashboard. Ia hanya
+menyatakan maksud, dan `MainFlowView` — yang memang sudah menyusun kelima tab — yang
+menerjemahkannya. Ini juga membuat perpindahan lintas tab punya satu titik yang bisa
+dicatat untuk analytics.
+
 ### Ongkosnya
 
 `MainFlowView` menjadi generik atas `Destination`. Ini menular ke pemanggilnya, tapi
