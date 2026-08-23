@@ -141,3 +141,52 @@ Kalau proyek sebesar ini gagal dalam dua tahun, urutan penyebab yang paling mung
 3. **Bug SwiftUI spesifik versi iOS.** Terutama pada OS terendah yang masih didukung.
 
 Arsitektur ada di urutan keempat. Kalau energi Anda terbatas, taruh di tiga hal di atas.
+
+---
+
+## 8. Deep link: bentuk yang dipakai
+
+URL diurai jadi nilai lebih dulu, baru dipetakan tiap flow ke path miliknya.
+
+```text
+URL masuk (SceneDelegate)
+  └→ DeepLink(url:)                    nilai murni, bisa diuji tanpa UI
+       └→ AppCoordinator.handle(_:)    satu-satunya gerbang, di sinilah auth digating
+            ├─ belum login  → simpan sebagai pendingDeepLink, tampilkan Pre-login
+            └─ sudah login  → rootState.deepLink, bangun Main
+                 └→ MainTab.tab(for:)          segmen pertama → tab mana
+                    DashboardRoute.path(for:)  sisa segmen → path tab itu
+```
+
+Empat sifat yang membuat ini bertahan sampai ratusan layar:
+
+1. **Tidak ada registry pusat.** Tiap flow memetakan URL-nya sendiri, jadi menambah deep
+   link baru tidak menyentuh file milik flow lain — dan tidak ada daftar yang bisa lupa
+   diperbarui.
+2. **Gating autentikasi hanya ada di satu tempat.** Deep link yang datang saat belum login
+   disimpan, lalu dijalankan setelah login berhasil. Tidak ada layar yang perlu memeriksa
+   sesi sendiri.
+3. **Bisa diuji tanpa simulator.** `DashboardRoute.path(for: link)` adalah fungsi murni.
+4. **Segmen tak dikenal jatuh ke root**, bukan crash atau layar kosong.
+
+## 9. Anggaran frame rate
+
+`PerformanceBudget` memisahkan dua hal yang sering dicampur:
+
+| Ukuran | Kenapa perlu dipisah |
+|---|---|
+| FPS rata-rata | menyembunyikan tersendat singkat |
+| Hitch | satu frame molor 300 ms terasa jelas, tapi hampir tak menggeser rata-rata |
+
+Default `.sixtyFPS`: turun di bawah 55 fps **atau** lebih dari dua hitch dalam satu detik
+dihitung sebagai pelanggaran. Setiap pelanggaran dicatat ke kategori `performance`, dan
+badge FPS menampilkan jumlah kumulatifnya — badge bisa hijau sekarang padahal sudah
+beberapa kali tersendat tadi, jadi angka itu yang dibaca, bukan warnanya.
+
+Launch argument `-assertPerformance` mengubah peringatan menjadi assertion DEBUG, pola
+yang sama dengan `-assertLeaks`. Pakai saat menguji flow yang dicurigai berat, supaya
+aplikasi berhenti tepat di titik pelanggaran, bukan setelah semuanya lewat.
+
+**Yang belum ada dan tidak bisa dibuat dari sini:** menjadikan anggaran ini gate di CI.
+Itu butuh UI test yang menjalankan flow utama pada simulator, lalu membaca hasilnya —
+konfigurasinya bergantung pada CI Anda.

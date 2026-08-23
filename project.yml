@@ -90,6 +90,7 @@ schemes:
       commandLineArguments:
         "-showFPS": false
         "-assertLeaks": false
+        "-assertPerformance": false
         "-simulateRootedDevice": false
         "-simulateActiveCall": false
         "-simulateSplashFailure": false

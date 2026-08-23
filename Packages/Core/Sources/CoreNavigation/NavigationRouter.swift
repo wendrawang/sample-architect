@@ -20,11 +20,17 @@ public final class NavigationRouter<Route: Hashable>: ObservableObject {
 
     /// - Parameter rootScreen: nama layar dasar flow ini, dipakai saat path kembali kosong
     ///   sehingga screen view tetap tercatat ketika pengguna menekan Back.
-    public init(rootScreen: String) {
+    /// - Parameters:
+    ///   - rootScreen: nama layar dasar flow ini, dipakai saat path kembali kosong sehingga
+    ///     screen view tetap tercatat ketika pengguna menekan Back.
+    ///   - initialPath: path awal, dipakai deep link untuk membuka flow ini langsung pada
+    ///     layar tertentu.
+    public init(rootScreen: String, initialPath: [Route] = []) {
         let name = String(describing: Route.self)
         label = name
         self.rootScreen = rootScreen
         lifecycleProbe = LifecycleProbe("NavigationRouter<\(name)>")
+        path = initialPath
     }
 
     public var isAtRoot: Bool { path.isEmpty }

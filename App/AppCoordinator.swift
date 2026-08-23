@@ -29,6 +29,10 @@ final class AppCoordinator: ObservableObject {
     private let apiClient: AlamofireAPIClient
     private let sessionStore: AppSessionStore
     private var hasStartedInitialFlow = false
+    /// Deep link yang datang saat pengguna belum login. Disimpan, lalu dijalankan setelah
+    /// autentikasi berhasil — satu-satunya tempat gating ini ada, jadi tidak mungkin
+    /// terlewat di salah satu layar.
+    private var pendingDeepLink: DeepLink?
 
     init(
         configuration: AppConfiguration,
@@ -105,6 +109,23 @@ final class AppCoordinator: ObservableObject {
         UIApplication.shared.open(url)
     }
 
+    /// Satu-satunya pintu masuk deep link. Dipanggil `SceneDelegate` untuk URL saat cold
+    /// launch maupun saat aplikasi sudah berjalan.
+    func handle(_ deepLink: DeepLink) {
+        AppLogger.navigation.info(
+            "Deep link: \(deepLink.segments.joined(separator: "/"), privacy: .public)"
+        )
+
+        guard sessionStore.currentCredential() != nil else {
+            pendingDeepLink = deepLink
+            showPreLogin()
+            return
+        }
+
+        rootState.deepLink = deepLink
+        showMain()
+    }
+
     func handleLaunchDestination(_ destination: LaunchDestination) {
         switch destination {
         case .main where sessionStore.currentCredential() != nil:
@@ -124,6 +145,8 @@ final class AppCoordinator: ObservableObject {
         )
         sessionStore.save(credential: credential)
         apiClient.updateCredential(credential)
+        rootState.deepLink = pendingDeepLink
+        pendingDeepLink = nil
         showMain()
     }
 
@@ -146,10 +169,16 @@ final class AppCoordinator: ObservableObject {
     private func showPreLogin() {
         sessionStore.clear()
         apiClient.updateCredential(nil)
+        rootState.deepLink = nil
         transitionContent(to: .preLogin)
     }
 
     private func showMain() {
+        // Kalau sudah berada di Main, `transitionContent` tidak melakukan apa-apa. Untuk
+        // deep link itu tidak cukup — flow harus dibangun ulang supaya path awalnya dipakai.
+        if rootState.content == .main, rootState.deepLink != nil {
+            rootState.content = .launching
+        }
         transitionContent(to: .main)
     }
 

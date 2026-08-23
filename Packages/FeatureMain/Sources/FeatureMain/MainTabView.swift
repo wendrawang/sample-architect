@@ -20,13 +20,21 @@ public struct MainTabView<DashboardDestination: View>: View {
 
     private let dashboardDestination: (DashboardRoute) -> DashboardDestination
 
+    private let dashboardInitialPath: [DashboardRoute]
+
     public init(
         dependencies: any DashboardDependencies,
+        deepLink: DeepLink? = nil,
         onLogout: @escaping () -> Void,
         @ViewBuilder dashboardDestination: @escaping (DashboardRoute) -> DashboardDestination
     ) {
         self.dashboardDestination = dashboardDestination
-        _viewModel = StateObject(wrappedValue: MainTabViewModel())
+        dashboardInitialPath = deepLink.map { DashboardRoute.path(for: $0.dropFirstSegment()) } ?? []
+        _viewModel = StateObject(
+            wrappedValue: MainTabViewModel(
+                initialTab: deepLink.map(MainTab.tab(for:)) ?? .dashboard
+            )
+        )
         _dashboardViewModel = StateObject(
             wrappedValue: DashboardViewModel(
                 getSummary: GetDashboardSummaryUseCase(
@@ -45,6 +53,7 @@ public struct MainTabView<DashboardDestination: View>: View {
             TabView(selection: $viewModel.selection) {
                 DashboardFlowView(
                     viewModel: dashboardViewModel,
+                    initialPath: dashboardInitialPath,
                     destination: dashboardDestination
                 )
                     .tag(MainTab.dashboard)

@@ -25,7 +25,10 @@ let package = Package(
         ),
         .testTarget(
             name: "FeatureAuthTests",
-            dependencies: ["FeatureAuth"]
+            dependencies: [
+                "FeatureAuth",
+                .product(name: "CoreTestSupport", package: "Core")
+            ]
         )
     ],
     swiftLanguageModes: [.v6]

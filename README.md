@@ -726,6 +726,7 @@ Verifikasi pada device fisik:
 |---|---|
 | `-showFPS` | Menampilkan FPS/hitch badge |
 | `-assertLeaks` | DEBUG assertion jika object yang dilaporkan ke `LeakWatchdog` belum deinit setelah grace period |
+| `-assertPerformance` | DEBUG assertion setiap kali anggaran frame rate terlampaui |
 | `-simulateRootedDevice` | Menampilkan compromised-device root blocker |
 | `-simulateActiveCall` | Menampilkan active-call root blocker |
 | `-simulateSplashFailure` | Splash inquiry mock gagal dan menampilkan retry blocker |

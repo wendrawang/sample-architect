@@ -54,10 +54,36 @@ private final class DisplayLinkProxy: NSObject {
     }
 }
 
+/// Ambang yang dianggap "masih 60 fps".
+///
+/// 60 Hz memberi anggaran 16,67 ms per frame. Rata-rata FPS saja menyesatkan — satu frame
+/// yang molor 300 ms terasa jelas oleh pengguna tetapi hampir tidak menggeser rata-rata.
+/// Karena itu hitch dihitung terpisah.
+public struct PerformanceBudget: Sendable {
+    public let minimumFPS: Int
+    public let maximumHitchesPerWindow: Int
+
+    public init(minimumFPS: Int, maximumHitchesPerWindow: Int) {
+        self.minimumFPS = minimumFPS
+        self.maximumHitchesPerWindow = maximumHitchesPerWindow
+    }
+
+    /// Default: turun di bawah 55 fps, atau lebih dari dua frame molor dalam satu detik,
+    /// dihitung sebagai pelanggaran.
+    public static let sixtyFPS = PerformanceBudget(minimumFPS: 55, maximumHitchesPerWindow: 2)
+}
+
 @MainActor
 public final class FrameRateMonitor: ObservableObject {
     @Published public private(set) var framesPerSecond: Int = 0
     @Published public private(set) var hitchCount: Int = 0
+    /// Berapa kali anggaran dilanggar sejak monitor dijalankan. Ditampilkan pada badge
+    /// supaya QA bisa melihatnya tanpa membuka Console.
+    @Published public private(set) var budgetViolations: Int = 0
+
+    private let budget: PerformanceBudget
+    private let assertsOnViolation: Bool
+    private var hitchesInWindow = 0
 
     private let proxy = DisplayLinkProxy()
     /// `deinit` is nonisolated, so it cannot read a main-actor-isolated property of a
@@ -68,7 +94,14 @@ public final class FrameRateMonitor: ObservableObject {
     private var windowStart: CFTimeInterval = 0
     private var previousTimestamp: CFTimeInterval = 0
 
-    public init() {
+    /// - Parameter budget: ambang yang dianggap masih memenuhi target frame rate.
+    ///
+    /// Launch argument `-assertPerformance` mengubah peringatan menjadi assertion DEBUG,
+    /// sehingga pelanggaran anggaran menghentikan aplikasi tepat saat terjadi — pola yang
+    /// sama dengan `-assertLeaks`.
+    public init(budget: PerformanceBudget = .sixtyFPS) {
+        self.budget = budget
+        assertsOnViolation = ProcessInfo.processInfo.arguments.contains("-assertPerformance")
         proxy.owner = self
     }
 
@@ -100,6 +133,7 @@ public final class FrameRateMonitor: ObservableObject {
 
         if frameDuration > (1.0 / 30.0) {
             hitchCount += 1
+            hitchesInWindow += 1
         }
 
         let elapsed = displayLink.timestamp - windowStart
@@ -108,12 +142,30 @@ public final class FrameRateMonitor: ObservableObject {
         let measuredFPS = Int((Double(frameCount) / elapsed).rounded())
         framesPerSecond = measuredFPS
 
-        if measuredFPS < 55 {
-            AppLogger.performance.warning("Low frame rate detected: \(measuredFPS, privacy: .public) FPS")
-        }
+        evaluateBudget(fps: measuredFPS, hitches: hitchesInWindow)
 
         frameCount = 0
+        hitchesInWindow = 0
         windowStart = displayLink.timestamp
+    }
+
+    private func evaluateBudget(fps: Int, hitches: Int) {
+        let belowFPS = fps < budget.minimumFPS
+        let tooManyHitches = hitches > budget.maximumHitchesPerWindow
+        guard belowFPS || tooManyHitches else { return }
+
+        budgetViolations += 1
+        AppLogger.performance.warning(
+            "Performance budget terlampaui: \(fps, privacy: .public) FPS (minimum \(self.budget.minimumFPS, privacy: .public)), \(hitches, privacy: .public) hitch (maksimum \(self.budget.maximumHitchesPerWindow, privacy: .public))"
+        )
+
+        #if DEBUG
+        if assertsOnViolation {
+            assertionFailure(
+                "Performance budget terlampaui: \(fps) FPS, \(hitches) hitch dalam satu detik."
+            )
+        }
+        #endif
     }
 
     deinit {

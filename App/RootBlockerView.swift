@@ -68,12 +68,14 @@ struct FPSBadgeView: View {
     @ObservedObject var monitor: FrameRateMonitor
 
     var body: some View {
-        Text("\(monitor.framesPerSecond) FPS • \(monitor.hitchCount) hitch")
+        // Jumlah pelanggaran anggaran ikut ditampilkan supaya QA melihatnya tanpa membuka
+        // Console: badge boleh hijau sekarang padahal sudah beberapa kali tersendat tadi.
+        Text("\(monitor.framesPerSecond) FPS • \(monitor.hitchCount) hitch • \(monitor.budgetViolations) over")
             .font(.system(size: 11, weight: .bold, design: .monospaced))
             .foregroundColor(.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(monitor.framesPerSecond >= 55 ? Color.green.opacity(0.88) : Color.red.opacity(0.88))
+            .background(monitor.budgetViolations == 0 ? Color.green.opacity(0.88) : Color.red.opacity(0.88))
             .clipShape(Capsule())
     }
 }

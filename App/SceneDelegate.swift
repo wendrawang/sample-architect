@@ -1,4 +1,5 @@
 import CoreKit
+import CoreNavigation
 import SwiftUI
 import UIKit
 
@@ -24,6 +25,25 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         appCoordinator = coordinator
         window.makeKeyAndVisible()
         coordinator.start()
+
+        // URL yang membuka aplikasi dari keadaan mati.
+        if let url = connectionOptions.urlContexts.first?.url {
+            handle(url)
+        }
+    }
+
+    /// URL yang datang ketika aplikasi sudah berjalan.
+    func scene(_ scene: UIScene, openURLContexts urlContexts: Set<UIOpenURLContext>) {
+        guard let url = urlContexts.first?.url else { return }
+        handle(url)
+    }
+
+    private func handle(_ url: URL) {
+        guard let deepLink = DeepLink(url: url) else {
+            AppLogger.navigation.error("Deep link tidak dapat diurai: \(url.absoluteString, privacy: .public)")
+            return
+        }
+        appCoordinator?.handle(deepLink)
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

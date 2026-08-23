@@ -7,6 +7,20 @@ public enum DashboardRoute: Hashable, Sendable {
     case transfer
 }
 
+extension DashboardRoute {
+    /// Memetakan sisa segmen URL menjadi path. Dimiliki package ini, bukan registry pusat,
+    /// jadi menambah deep link baru di Beranda tidak menyentuh package lain.
+    ///
+    /// Segmen yang tidak dikenali menghasilkan path kosong — layar tetap terbuka di root,
+    /// bukan crash atau layar kosong.
+    public static func path(for link: DeepLink) -> [DashboardRoute] {
+        switch link.root {
+        case "transfer": return [.transfer]
+        default:         return []
+        }
+    }
+}
+
 /// Satu `NavigationStack` milik tab Beranda sendiri.
 ///
 /// Layar tujuan dibangun oleh composition root lewat `destination`, sehingga package ini
@@ -14,15 +28,19 @@ public enum DashboardRoute: Hashable, Sendable {
 /// menghasilkan satu tipe konkret, jadi `AnyView` tetap tidak diperlukan dan `switch`-nya
 /// tetap exhaustive.
 public struct DashboardFlowView<Destination: View>: View {
-    @StateObject private var router = NavigationRouter<DashboardRoute>(rootScreen: "dashboard")
+    @StateObject private var router: NavigationRouter<DashboardRoute>
     @ObservedObject private var viewModel: DashboardViewModel
 
     private let destination: (DashboardRoute) -> Destination
 
     public init(
         viewModel: DashboardViewModel,
+        initialPath: [DashboardRoute] = [],
         @ViewBuilder destination: @escaping (DashboardRoute) -> Destination
     ) {
+        _router = StateObject(
+            wrappedValue: NavigationRouter(rootScreen: "dashboard", initialPath: initialPath)
+        )
         self.viewModel = viewModel
         self.destination = destination
     }

@@ -13,7 +13,9 @@ public final class PasswordViewModel: ObservableObject {
     private let loginUseCase: any LoginUseCaseProtocol
     private let onAuthenticated: (AuthSession) -> Void
     private let lifecycleProbe = LifecycleProbe("PasswordViewModel")
-    private var loginTask: Task<Void, Never>?
+    /// Internal, bukan private, supaya test dapat menunggu pekerjaan yang sedang berjalan
+    /// lewat `@testable import`. Tetap tidak terlihat dari luar modul.
+    private(set) var loginTask: Task<Void, Never>?
 
     public init(
         username: String,

@@ -1,4 +1,5 @@
 import CoreGuards
+import CoreNavigation
 import DesignSystem
 import FeatureAuth
 import FeatureDashboard
@@ -58,6 +59,7 @@ struct AppRootView: View {
         case .main:
             MainTabView(
                 dependencies: coordinator.dependencies,
+                deepLink: coordinator.rootState.deepLink,
                 onLogout: coordinator.handleLogout
             ) { route in
                 switch route {

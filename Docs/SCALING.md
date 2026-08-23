@@ -115,7 +115,7 @@ berisi lima puluh field.
 
 ---
 
-## Gap 2 — Deep link dan navigasi lintas flow
+## Gap 2 — Deep link dan navigasi lintas flow — **sudah diterapkan**
 
 ### Masalahnya
 
@@ -330,7 +330,7 @@ bisa dicatat sekali dan valid.
 |---|---|---|
 | 3 — dependency | ✅ Diterapkan | Feature mendeklarasikan kebutuhannya; `AppDependencies` memenuhinya. |
 | 1 — god module | ✅ Diterapkan | Satu stack per tab; layar tujuan dibangun composition root. |
-| 2 — deep link | ⏳ Belum | Terapkan saat requirement deep link atau push notification pertama muncul. Menebak bentuk URL sebelum ada requirement biasanya salah. |
+| 2 — deep link | ✅ Diterapkan | `DeepLink` di CoreNavigation, pemetaan dimiliki tiap flow, gating auth di `AppCoordinator`. |
 
 Gap 2 berdiri sendiri dan tidak bergantung pada dua lainnya.
 
